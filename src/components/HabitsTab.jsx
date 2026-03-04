@@ -1,0 +1,366 @@
+import { useState, useEffect, useCallback } from 'react'
+import { supabase, today } from '../lib/supabase'
+import { Ring } from './ui/Ring'
+import { Card } from './ui/Card'
+import { SavedBadge } from './ui/SavedBadge'
+
+const C = {
+  bg: '#FDF6EE', primary: '#E8832A', sage: '#5A8A6A',
+  blue: '#4A86B0', rose: '#D95F5F', amber: '#C9923A',
+  white: '#FFFFFF', gray: '#6B7280', border: '#E8D5C0',
+}
+
+const TODAY = today()
+const WEEK_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+
+function getWeekDates() {
+  const d = new Date()
+  const dow = d.getDay()
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  return Array.from({ length: 7 }, (_, i) => {
+    const dd = new Date(d)
+    dd.setDate(d.getDate() + mondayOffset + i)
+    return dd.toISOString().split('T')[0]
+  })
+}
+
+const EMOJI_OPTIONS = ['⭐', '🏃', '💧', '📚', '🧘', '💪', '🍎', '😴', '🎯', '✍️', '🎸', '🌿', '🧹', '☕', '🚶', '🎨', '🙏', '📝']
+
+export default function HabitsTab() {
+  const [habits, setHabits] = useState([])
+  const [logs, setLogs] = useState({})
+  const [weekLogs, setWeekLogs] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [showAdd, setShowAdd] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newEmoji, setNewEmoji] = useState('⭐')
+  const [newTarget, setNewTarget] = useState(1)
+  const [showSaved, setShowSaved] = useState(false)
+  const weekDates = getWeekDates()
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { data: habitsData, error: hErr } = await supabase
+        .from('habits').select('*').order('created_at', { ascending: true })
+      if (hErr) throw hErr
+
+      const allDates = weekDates
+      const { data: allLogs } = await supabase
+        .from('habit_logs').select('*').in('datum', allDates)
+
+      const todayLogs = (allLogs || []).filter(l => l.datum === TODAY)
+      const logsMap = {}
+      for (const l of todayLogs) logsMap[l.habit_id] = { done: l.done, id: l.id }
+
+      // Create missing today logs
+      if (habitsData) {
+        for (const h of habitsData) {
+          if (!logsMap[h.id]) {
+            const { data: nl } = await supabase
+              .from('habit_logs').insert({ habit_id: h.id, datum: TODAY, done: 0 }).select().single()
+            if (nl) logsMap[h.id] = { done: 0, id: nl.id }
+          }
+        }
+      }
+
+      // Week overview map
+      const wMap = {}
+      for (const d of weekDates) {
+        const dayLogs = (allLogs || []).filter(l => l.datum === d)
+        const total = (habitsData || []).length
+        const done = dayLogs.filter(l => {
+          const h = (habitsData || []).find(hh => hh.id === l.habit_id)
+          return h && l.done >= h.target
+        }).length
+        wMap[d] = { done, total }
+      }
+
+      setHabits(habitsData || [])
+      setLogs(logsMap)
+      setWeekLogs(wMap)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  async function toggleHabit(habit) {
+    const log = logs[habit.id]
+    if (!log) return
+    const prev = log.done
+    let next
+    if (habit.target === 1) {
+      next = prev >= 1 ? 0 : 1
+    } else {
+      next = prev < habit.target ? prev + 1 : 0
+    }
+
+    // Optimistic update
+    setLogs(l => ({ ...l, [habit.id]: { ...l[habit.id], done: next } }))
+
+    const { error } = await supabase.from('habit_logs').update({ done: next }).eq('id', log.id)
+    if (error) {
+      setLogs(l => ({ ...l, [habit.id]: { ...l[habit.id], done: prev } }))
+      return
+    }
+
+    // Streak management
+    const wasComplete = prev >= habit.target
+    const isComplete = next >= habit.target
+    if (!wasComplete && isComplete) {
+      const ns = (habit.streak || 0) + 1
+      await supabase.from('habits').update({ streak: ns }).eq('id', habit.id)
+      setHabits(h => h.map(hh => hh.id === habit.id ? { ...hh, streak: ns } : hh))
+    } else if (wasComplete && !isComplete) {
+      const ns = Math.max(0, (habit.streak || 0) - 1)
+      await supabase.from('habits').update({ streak: ns }).eq('id', habit.id)
+      setHabits(h => h.map(hh => hh.id === habit.id ? { ...hh, streak: ns } : hh))
+    }
+
+    flashSaved()
+  }
+
+  async function addHabit() {
+    if (!newName.trim()) return
+    const { data, error } = await supabase
+      .from('habits')
+      .insert({ name: newName.trim(), emoji: newEmoji, target: newTarget, streak: 0, color: C.primary })
+      .select().single()
+    if (error) return
+    setHabits(h => [...h, data])
+    const { data: nl } = await supabase
+      .from('habit_logs').insert({ habit_id: data.id, datum: TODAY, done: 0 }).select().single()
+    if (nl) setLogs(l => ({ ...l, [data.id]: { done: 0, id: nl.id } }))
+    setNewName(''); setNewEmoji('⭐'); setNewTarget(1); setShowAdd(false)
+    flashSaved()
+  }
+
+  function flashSaved() {
+    setShowSaved(true)
+    setTimeout(() => setShowSaved(false), 2000)
+  }
+
+  const doneCount = habits.filter(h => (logs[h.id]?.done || 0) >= h.target).length
+  const progress = habits.length > 0 ? (doneCount / habits.length) * 100 : 0
+
+  function greeting() {
+    if (progress === 100) return '🎉 Alles geschafft! Du bist grossartig!'
+    if (progress >= 75) return '💪 Fast am Ziel! Weiter so!'
+    if (progress >= 50) return '🌟 Gute Arbeit – du bist auf Kurs!'
+    if (progress >= 25) return '🌱 Guter Start! Bleib dran!'
+    return '☀️ Guten Morgen! Mach deinen Tag fantastisch!'
+  }
+
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}>
+      <div style={{ width: 36, height: 36, border: `3px solid ${C.border}`, borderTop: `3px solid ${C.primary}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
+
+  return (
+    <div style={{ padding: '16px 16px 0' }}>
+      <SavedBadge visible={showSaved} />
+
+      {/* Hero */}
+      <div style={{
+        background: `linear-gradient(135deg, ${C.primary} 0%, ${C.amber} 100%)`,
+        borderRadius: 20, padding: '20px 20px', marginBottom: 14,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        boxShadow: '0 4px 20px rgba(232,131,42,0.3)',
+      }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginBottom: 4 }}>Meine Gewohnheiten</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }}>{greeting()}</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+            {doneCount} / {habits.length} heute erledigt
+          </div>
+        </div>
+        <Ring percent={progress} size={74} color="white" trackColor="rgba(255,255,255,0.25)" />
+      </div>
+
+      {/* Week */}
+      <Card style={{ marginBottom: 14, padding: '14px 16px' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, marginBottom: 10, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+          Diese Woche
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          {WEEK_LABELS.map((label, i) => {
+            const d = weekDates[i]
+            const isToday = d === TODAY
+            const isFuture = d > TODAY
+            const wl = weekLogs[d]
+            const isDone = !isFuture && wl && wl.total > 0 && wl.done === wl.total
+            const isPartial = !isFuture && wl && wl.done > 0 && wl.done < wl.total
+
+            let bg = '#F3F4F6'
+            let textColor = C.gray
+            if (isDone) { bg = C.primary; textColor = 'white' }
+            else if (isPartial) { bg = `${C.primary}55`; textColor = C.primary }
+            else if (isToday) { bg = `${C.primary}18`; textColor = C.primary }
+
+            return (
+              <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 500, color: isToday ? C.primary : C.gray }}>
+                  {label}
+                </div>
+                <div style={{
+                  width: 30, height: 30, borderRadius: '50%',
+                  background: bg, color: textColor,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 700,
+                  border: isToday ? `2px solid ${C.primary}` : '2px solid transparent',
+                  transition: 'all 0.2s',
+                }}>
+                  {isDone ? '✓' : isPartial ? wl.done : ''}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* Habit List */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+        {habits.map(habit => {
+          const done = logs[habit.id]?.done || 0
+          const completed = done >= habit.target
+          const pct = habit.target > 1 ? Math.min(done / habit.target, 1) : 0
+          const col = habit.color || C.primary
+
+          return (
+            <div
+              key={habit.id}
+              onClick={() => toggleHabit(habit)}
+              style={{
+                background: C.white, borderRadius: 16, padding: '14px 16px',
+                display: 'flex', alignItems: 'center', gap: 14,
+                border: `2px solid ${completed ? col + '60' : 'transparent'}`,
+                boxShadow: completed ? `0 2px 12px ${col}25` : '0 1px 6px rgba(0,0,0,0.05)',
+                cursor: 'pointer', transition: 'all 0.2s ease',
+                transform: completed ? 'scale(1.01)' : 'scale(1)',
+                animation: 'fadeIn 0.3s ease',
+              }}
+            >
+              {/* Icon */}
+              <div style={{
+                width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                background: completed ? col : `${col}20`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 24, transition: 'all 0.2s',
+              }}>
+                {habit.emoji}
+              </div>
+
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontWeight: 700, fontSize: 15, color: '#222',
+                  textDecoration: completed && habit.target === 1 ? 'line-through' : 'none',
+                  opacity: completed && habit.target === 1 ? 0.5 : 1,
+                  transition: 'all 0.2s',
+                }}>
+                  {habit.name}
+                </div>
+                {habit.target > 1 ? (
+                  <div style={{ marginTop: 5 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.gray, marginBottom: 3 }}>
+                      <span>{done} / {habit.target}</span>
+                      <span>{Math.round(pct * 100)}%</span>
+                    </div>
+                    <div style={{ height: 5, background: '#F3F0EB', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct * 100}%`, background: col, borderRadius: 3, transition: 'width 0.3s ease' }} />
+                    </div>
+                  </div>
+                ) : (
+                  habit.streak > 0 && (
+                    <div style={{ fontSize: 12, color: '#F39C12', marginTop: 2, fontWeight: 600 }}>
+                      🔥 {habit.streak} {habit.streak === 1 ? 'Tag' : 'Tage'} Serie
+                    </div>
+                  )
+                )}
+              </div>
+
+              {/* Check */}
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background: completed ? col : '#F3F0EB',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 15, color: completed ? 'white' : C.gray,
+                fontWeight: 700, transition: 'all 0.2s',
+              }}>
+                {completed ? '✓' : habit.target > 1 ? done : ''}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Add Habit */}
+      {showAdd ? (
+        <Card style={{ marginBottom: 14 }}>
+          <div style={{ fontWeight: 800, fontSize: 16, color: '#333', marginBottom: 14 }}>Neuen Habit hinzufügen</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <div style={{ position: 'relative' }}>
+              <input
+                value={newEmoji}
+                onChange={e => setNewEmoji(e.target.value)}
+                style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#FDF6EE' }}
+              />
+            </div>
+            <input
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Name des Habits"
+              autoFocus
+              style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#FDF6EE' }}
+            />
+          </div>
+          {/* Emoji Picker */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            {EMOJI_OPTIONS.map(em => (
+              <button key={em} onClick={() => setNewEmoji(em)} style={{
+                width: 36, height: 36, borderRadius: 10, border: `2px solid ${newEmoji === em ? C.primary : C.border}`,
+                background: newEmoji === em ? `${C.primary}15` : C.white, fontSize: 18, cursor: 'pointer',
+              }}>
+                {em}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{ fontSize: 14, color: C.gray, fontWeight: 600 }}>Tagesziel:</span>
+            <input
+              type="number" min={1} max={20} value={newTarget}
+              onChange={e => setNewTarget(Math.max(1, parseInt(e.target.value) || 1))}
+              style={{ width: 64, padding: '8px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 15, textAlign: 'center' }}
+            />
+            <span style={{ fontSize: 14, color: C.gray }}>× pro Tag</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: 12, background: '#F3F0EB', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 600, color: C.gray }}>
+              Abbrechen
+            </button>
+            <button onClick={addHabit} style={{ flex: 2, padding: 12, background: C.primary, border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 700, color: 'white' }}>
+              Habit hinzufügen
+            </button>
+          </div>
+        </Card>
+      ) : (
+        <button
+          onClick={() => setShowAdd(true)}
+          style={{
+            width: '100%', padding: '14px', marginBottom: 8,
+            background: `${C.primary}12`, border: `2px dashed ${C.primary}50`,
+            borderRadius: 16, color: C.primary, fontSize: 15, fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          + Neuen Habit hinzufügen
+        </button>
+      )}
+    </div>
+  )
+}
