@@ -250,7 +250,7 @@ export default function TechnikTab() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          {routines.length} Routine{routines.length !== 1 ? 'en' : ''}
+          {routines.length} Techniktraining{routines.length !== 1 ? 's' : ''}
         </div>
         <button
           onClick={() => setSortMode(s => !s)}
