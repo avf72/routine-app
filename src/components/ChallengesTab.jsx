@@ -3,9 +3,9 @@ import { supabase, today } from '../lib/supabase'
 import { SavedBadge } from './ui/SavedBadge'
 
 const C = {
-  bg: '#FDF6EE', primary: '#E8832A', sage: '#5A8A6A',
-  blue: '#4A86B0', rose: '#D95F5F', amber: '#C9923A',
-  white: '#FFFFFF', gray: '#6B7280', border: '#E8D5C0',
+  bg: '#EFF5FC', primary: '#1E6FBF', sage: '#2A9D8F',
+  blue: '#4A7FA5', rose: '#D95F5F', amber: '#E07B39',
+  white: '#FFFFFF', gray: '#6B7280', border: '#C5D9EF',
 }
 const TODAY = today()
 
@@ -402,9 +402,9 @@ export default function ChallengesTab() {
       {/* Header Stats */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         {[
-          { label: 'Aktiv', value: activeChallenges.length, color: C.primary, bg: '#FFF5EC', icon: '🔥' },
-          { label: 'Verfügbar', value: availableChallenges.length, color: C.blue, bg: '#EDF4FB', icon: '💡' },
-          { label: 'Abgeschlossen', value: completedChallenges.length, color: C.sage, bg: '#F0F7F2', icon: '🏆' },
+          { label: 'Aktiv', value: activeChallenges.length, color: C.primary, bg: '#EBF3FC', icon: '🔥' },
+          { label: 'Verfügbar', value: availableChallenges.length, color: C.blue, bg: '#EBF3FC', icon: '💡' },
+          { label: 'Abgeschlossen', value: completedChallenges.length, color: C.sage, bg: '#E8F5F3', icon: '🏆' },
         ].map(s => (
           <div key={s.label} style={{
             flex: 1, background: s.bg, borderRadius: 14, padding: '12px 10px',
@@ -453,7 +453,7 @@ export default function ChallengesTab() {
                       </div>
                     </div>
                     {/* Progress */}
-                    <div style={{ height: 7, background: '#F3F0EB', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                    <div style={{ height: 7, background: '#E8EEF5', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
                       <div style={{ height: '100%', width: `${pct}%`, background: ch.color || C.primary, borderRadius: 4, transition: 'width 0.5s ease' }} />
                     </div>
 
@@ -487,7 +487,7 @@ export default function ChallengesTab() {
                       <button
                         onClick={() => resetChallenge(ch)}
                         style={{
-                          flex: 1, padding: '11px', background: '#F3F0EB',
+                          flex: 1, padding: '11px', background: '#E8EEF5',
                           border: 'none', borderRadius: 12, color: C.gray,
                           fontWeight: 600, fontSize: 12, cursor: 'pointer',
                         }}
@@ -497,7 +497,7 @@ export default function ChallengesTab() {
                       <button
                         onClick={() => openEdit(ch)}
                         style={{
-                          width: 40, padding: '11px', background: '#F3F0EB',
+                          width: 40, padding: '11px', background: '#E8EEF5',
                           border: 'none', borderRadius: 12, color: C.gray,
                           fontWeight: 700, fontSize: 16, cursor: 'pointer', flexShrink: 0,
                         }}
@@ -520,7 +520,7 @@ export default function ChallengesTab() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {completedChallenges.map(ch => (
               <div key={ch.id} style={{
-                background: '#F0F7F2', borderRadius: 16, padding: '14px 16px',
+                background: '#E8F5F3', borderRadius: 16, padding: '14px 16px',
                 display: 'flex', alignItems: 'center', gap: 12,
               }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: `${C.sage}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
@@ -556,7 +556,7 @@ export default function ChallengesTab() {
                 <button onClick={() => openEdit(ch)} style={{
                   position: 'absolute', top: 8, right: 8,
                   width: 26, height: 26, borderRadius: '50%',
-                  background: '#F3F0EB', border: 'none', cursor: 'pointer',
+                  background: '#E8EEF5', border: 'none', cursor: 'pointer',
                   fontSize: 14, color: C.gray, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>⋯</button>
                 <div onClick={() => setSelectedChallenge(ch)} style={{ cursor: 'pointer' }}>
@@ -600,7 +600,7 @@ export default function ChallengesTab() {
               maxHeight: '85vh', overflowY: 'auto',
             }}
           >
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0D8D0', margin: '0 auto 20px' }} />
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#C5D9EF', margin: '0 auto 20px' }} />
             <div style={{ fontWeight: 900, fontSize: 18, color: '#222', marginBottom: 20 }}>Challenge bearbeiten</div>
 
             {/* Emoji */}
@@ -673,7 +673,7 @@ export default function ChallengesTab() {
                 <button
                   onClick={() => setConfirmDeleteChallenge(false)}
                   style={{
-                    flex: 1, padding: '13px', background: '#F3F0EB',
+                    flex: 1, padding: '13px', background: '#E8EEF5',
                     border: 'none', borderRadius: 12, color: C.gray,
                     fontWeight: 600, fontSize: 14, cursor: 'pointer',
                   }}
@@ -716,7 +716,7 @@ export default function ChallengesTab() {
             }}
           >
             {/* Handle */}
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0D8D0', margin: '0 auto 20px', display: 'block' }} />
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#C5D9EF', margin: '0 auto 20px', display: 'block' }} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
               <div style={{

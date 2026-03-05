@@ -4,9 +4,9 @@ import { Card } from './ui/Card'
 import { SavedBadge } from './ui/SavedBadge'
 
 const C = {
-  bg: '#FDF6EE', primary: '#E8832A', sage: '#5A8A6A',
-  blue: '#4A86B0', rose: '#D95F5F', amber: '#C9923A',
-  white: '#FFFFFF', gray: '#6B7280', border: '#E8D5C0',
+  bg: '#EFF5FC', primary: '#1E6FBF', sage: '#2A9D8F',
+  blue: '#4A7FA5', rose: '#D95F5F', amber: '#E07B39',
+  white: '#FFFFFF', gray: '#6B7280', border: '#C5D9EF',
 }
 const TODAY = today()
 
@@ -52,6 +52,7 @@ export default function TasksTab() {
   const [editPriority, setEditPriority] = useState('mittel')
   const [editDue, setEditDue] = useState(TODAY)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -125,6 +126,17 @@ export default function TasksTab() {
     }
   }
 
+  async function deleteAllDone() {
+    const ids = doneTasks.map(t => t.id)
+    const { error } = await supabase.from('tasks').delete().in('id', ids)
+    if (!error) {
+      setTasks(prev => prev.filter(t => !t.done))
+      setConfirmDeleteAll(false)
+      setShowDone(false)
+      flashSaved()
+    }
+  }
+
   function flashSaved() {
     setShowSaved(true)
     setTimeout(() => setShowSaved(false), 2000)
@@ -147,7 +159,7 @@ export default function TasksTab() {
     const pc = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.mittel
     return (
       <div style={{
-        background: faded ? '#F9F9F9' : C.white,
+        background: faded ? '#F4F8FD' : C.white,
         borderRadius: 14, padding: '12px 14px',
         display: 'flex', alignItems: 'center', gap: 10,
         boxShadow: faded ? 'none' : '0 1px 6px rgba(0,0,0,0.05)',
@@ -184,7 +196,7 @@ export default function TasksTab() {
           onClick={() => openEdit(task)}
           style={{
             width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-            background: '#F3F0EB', border: 'none', cursor: 'pointer',
+            background: '#E8EEF5', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 15, color: C.gray,
           }}
@@ -206,9 +218,9 @@ export default function TasksTab() {
       {/* Stats */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         {[
-          { label: 'Offen',      value: openTasks.length, color: C.primary, bg: '#FFF5EC', icon: '📋' },
-          { label: 'Erledigt',   value: doneCount,        color: C.sage,    bg: '#F0F7F2', icon: '✅' },
-          { label: 'Fortschritt',value: `${pct}%`,        color: C.blue,    bg: '#EDF4FB', icon: '📊' },
+          { label: 'Offen',      value: openTasks.length, color: C.primary, bg: '#EBF3FC', icon: '📋' },
+          { label: 'Erledigt',   value: doneCount,        color: C.sage,    bg: '#E8F5F3', icon: '✅' },
+          { label: 'Fortschritt',value: `${pct}%`,        color: C.blue,    bg: '#EBF3FC', icon: '📊' },
         ].map(s => (
           <div key={s.label} style={{
             flex: 1, background: s.bg, borderRadius: 16, padding: '14px 12px',
@@ -228,7 +240,7 @@ export default function TasksTab() {
             <span>Gesamtfortschritt</span>
             <span style={{ color: C.primary }}>{doneCount} / {totalTasks} Aufgaben</span>
           </div>
-          <div style={{ height: 8, background: '#F3F0EB', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: 8, background: '#E8EEF5', borderRadius: 4, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? C.sage : C.primary, borderRadius: 4, transition: 'width 0.5s ease' }} />
           </div>
         </div>
@@ -255,14 +267,40 @@ export default function TasksTab() {
       {/* Done Tasks */}
       {doneTasks.length > 0 && (
         <div style={{ marginBottom: 14 }}>
-          <button onClick={() => setShowDone(!showDone)} style={{
-            width: '100%', padding: '10px', background: '#F9F5F0',
-            border: 'none', borderRadius: 12, cursor: 'pointer',
-            fontSize: 13, fontWeight: 700, color: C.gray,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          }}>
-            {showDone ? '▲' : '▼'} {doneTasks.length} erledigte Aufgaben
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowDone(!showDone)} style={{
+              flex: 1, padding: '10px', background: '#F0F5FB',
+              border: 'none', borderRadius: 12, cursor: 'pointer',
+              fontSize: 13, fontWeight: 700, color: C.gray,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}>
+              {showDone ? '▲' : '▼'} {doneTasks.length} erledigte Aufgaben
+            </button>
+            <button onClick={() => setConfirmDeleteAll(true)} style={{
+              width: 44, padding: '10px', background: '#FFF0F0',
+              border: 'none', borderRadius: 12, cursor: 'pointer',
+              fontSize: 16, color: C.rose, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>🗑</button>
+          </div>
+
+          {confirmDeleteAll && (
+            <div style={{ background: '#FFF0F0', borderRadius: 12, padding: '12px 14px', marginTop: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.rose, marginBottom: 10, textAlign: 'center' }}>
+                Alle {doneTasks.length} erledigten Aufgaben löschen?
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setConfirmDeleteAll(false)} style={{
+                  flex: 1, padding: 10, background: '#E8EEF5', border: 'none',
+                  borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', color: C.gray,
+                }}>Abbrechen</button>
+                <button onClick={deleteAllDone} style={{
+                  flex: 1, padding: 10, background: C.rose, border: 'none',
+                  borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', color: 'white',
+                }}>Ja, alle löschen</button>
+              </div>
+            </div>
+          )}
+
           {showDone && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
               {doneTasks.map(task => <TaskRow key={task.id} task={task} faded />)}
@@ -277,7 +315,7 @@ export default function TasksTab() {
           <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 12 }}>Neue Aufgabe</div>
           <input value={newName} onChange={e => setNewName(e.target.value)}
             placeholder="Was möchtest du erledigen?" autoFocus
-            style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 14, marginBottom: 10, background: '#FDF6EE' }} />
+            style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 14, marginBottom: 10, background: '#F4F8FD' }} />
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 12, color: C.gray, marginBottom: 4, fontWeight: 600 }}>Priorität</div>
@@ -295,7 +333,7 @@ export default function TasksTab() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: 12, background: '#F3F0EB', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 600, color: C.gray }}>
+            <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: 12, background: '#E8EEF5', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 600, color: C.gray }}>
               Abbrechen
             </button>
             <button onClick={addTask} style={{ flex: 2, padding: 12, background: C.primary, border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 700, color: 'white' }}>
@@ -324,12 +362,12 @@ export default function TasksTab() {
             background: C.white, borderRadius: '24px 24px 0 0',
             padding: '20px 20px 36px', animation: 'slideUp 0.3s ease',
           }}>
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0D8D0', margin: '0 auto 20px' }} />
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#C5D9EF', margin: '0 auto 20px' }} />
             <div style={{ fontWeight: 900, fontSize: 17, marginBottom: 16 }}>Aufgabe bearbeiten</div>
 
             <input value={editName} onChange={e => setEditName(e.target.value)}
               placeholder="Aufgaben-Name" autoFocus
-              style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, marginBottom: 12, background: '#FDF6EE' }} />
+              style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, marginBottom: 12, background: '#F4F8FD' }} />
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               <div style={{ flex: 1 }}>
@@ -368,7 +406,7 @@ export default function TasksTab() {
                   Aufgabe wirklich löschen?
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: 10, background: '#F3F0EB', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', color: C.gray }}>
+                  <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: 10, background: '#E8EEF5', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', color: C.gray }}>
                     Abbrechen
                   </button>
                   <button onClick={deleteTask} style={{ flex: 1, padding: 10, background: C.rose, border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', color: 'white' }}>

@@ -6,7 +6,7 @@ export function SavedBadge({ visible }) {
       top: 70,
       left: '50%',
       transform: 'translateX(-50%)',
-      background: '#5A8A6A',
+      background: '#2A9D8F',
       color: 'white',
       padding: '8px 18px',
       borderRadius: 20,
@@ -16,7 +16,7 @@ export function SavedBadge({ visible }) {
       display: 'flex',
       alignItems: 'center',
       gap: 6,
-      boxShadow: '0 4px 16px rgba(90,138,106,0.35)',
+      boxShadow: '0 4px 16px rgba(42,157,143,0.35)',
       animation: 'fadeIn 0.2s ease',
       whiteSpace: 'nowrap',
     }}>

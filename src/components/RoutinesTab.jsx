@@ -4,9 +4,9 @@ import { Card } from './ui/Card'
 import { SavedBadge } from './ui/SavedBadge'
 
 const C = {
-  bg: '#FDF6EE', primary: '#E8832A', sage: '#5A8A6A',
-  blue: '#4A86B0', rose: '#D95F5F', amber: '#C9923A',
-  white: '#FFFFFF', gray: '#6B7280', border: '#E8D5C0',
+  bg: '#EFF5FC', primary: '#1E6FBF', sage: '#2A9D8F',
+  blue: '#4A7FA5', rose: '#D95F5F', amber: '#E07B39',
+  white: '#FFFFFF', gray: '#6B7280', border: '#C5D9EF',
 }
 const TODAY = today()
 
@@ -117,7 +117,7 @@ const ROUTINE_TEMPLATES = [
   },
 ]
 
-const tagColors = { morgen: '#C9923A', nachmittag: '#4A86B0', abend: '#8E44AD' }
+const tagColors = { morgen: '#E07B39', nachmittag: '#1E6FBF', abend: '#7B5EA7' }
 
 export default function RoutinesTab() {
   const [routines, setRoutines] = useState([])
@@ -415,7 +415,7 @@ export default function RoutinesTab() {
                       <span>•</span>
                       <span>{doneSteps}/{rs.length} Schritte</span>
                     </div>
-                    <div style={{ height: 5, background: '#F3F0EB', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: 5, background: '#E8EEF5', borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? C.sage : tagColor, borderRadius: 3, transition: 'width 0.4s ease' }} />
                     </div>
                   </div>
@@ -427,7 +427,7 @@ export default function RoutinesTab() {
                   onClick={e => { e.stopPropagation(); openEdit(routine) }}
                   style={{
                     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: '#F3F0EB', border: 'none', cursor: 'pointer',
+                    background: '#E8EEF5', border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 16, color: C.gray,
                   }}
@@ -496,10 +496,10 @@ export default function RoutinesTab() {
           <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Neue Routine</div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <input value={newEmoji} onChange={e => setNewEmoji(e.target.value)}
-              style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#FDF6EE' }} />
+              style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#F4F8FD' }} />
             <input value={newName} onChange={e => setNewName(e.target.value)}
               placeholder="Name der Routine" autoFocus
-              style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 14, background: '#FDF6EE' }} />
+              style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 14, background: '#F4F8FD' }} />
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <div style={{ flex: 1 }}>
@@ -518,7 +518,7 @@ export default function RoutinesTab() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: 11, background: '#F3F0EB', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 600, color: C.gray }}>
+            <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: 11, background: '#E8EEF5', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 600, color: C.gray }}>
               Abbrechen
             </button>
             <button onClick={addRoutine} style={{ flex: 2, padding: 11, background: C.primary, border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 700, color: 'white' }}>
@@ -541,7 +541,7 @@ export default function RoutinesTab() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ fontWeight: 900, fontSize: 17 }}>Routine-Vorlagen</div>
-              <button onClick={() => setShowTemplate(false)} style={{ background: '#F3F0EB', border: 'none', borderRadius: 20, width: 30, height: 30, cursor: 'pointer', fontSize: 16 }}>×</button>
+              <button onClick={() => setShowTemplate(false)} style={{ background: '#E8EEF5', border: 'none', borderRadius: 20, width: 30, height: 30, cursor: 'pointer', fontSize: 16 }}>×</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {ROUTINE_TEMPLATES.map(t => {
@@ -549,7 +549,7 @@ export default function RoutinesTab() {
                 const dur = t.steps.reduce((sum, s) => sum + s.duration, 0)
                 return (
                   <div key={t.name} onClick={() => addFromTemplate(t)} style={{
-                    background: '#F9F5F0', borderRadius: 14, padding: 14,
+                    background: '#F0F5FB', borderRadius: 14, padding: 14,
                     display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
                   }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: `${tc}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
@@ -580,16 +580,16 @@ export default function RoutinesTab() {
             maxHeight: '92vh', overflowY: 'auto',
           }}>
             {/* Handle */}
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0D8D0', margin: '0 auto 20px' }} />
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#C5D9EF', margin: '0 auto 20px' }} />
             <div style={{ fontWeight: 900, fontSize: 17, marginBottom: 16 }}>Routine bearbeiten</div>
 
             {/* Name & Emoji */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <input value={editEmoji} onChange={e => setEditEmoji(e.target.value)}
-                style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#FDF6EE' }} />
+                style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#F4F8FD' }} />
               <input value={editName} onChange={e => setEditName(e.target.value)}
                 placeholder="Name" autoFocus
-                style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#FDF6EE' }} />
+                style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#F4F8FD' }} />
             </div>
 
             {/* Time & Tag */}
@@ -617,17 +617,17 @@ export default function RoutinesTab() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
               {editSteps.map((step, i) => (
                 <div key={i} style={{
-                  background: '#F9F5F0', borderRadius: 12, padding: '10px 12px',
+                  background: '#F0F5FB', borderRadius: 12, padding: '10px 12px',
                   display: 'flex', alignItems: 'center', gap: 8,
                 }}>
                   {/* Up/Down */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
                     <button onClick={() => moveStep(i, -1)} disabled={i === 0}
-                      style={{ width: 22, height: 22, border: 'none', borderRadius: 6, background: i === 0 ? '#EEE' : '#E8D5C0', cursor: i === 0 ? 'default' : 'pointer', fontSize: 11, fontWeight: 800, color: i === 0 ? '#BBB' : '#666', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      style={{ width: 22, height: 22, border: 'none', borderRadius: 6, background: i === 0 ? '#EEE' : '#C5D9EF', cursor: i === 0 ? 'default' : 'pointer', fontSize: 11, fontWeight: 800, color: i === 0 ? '#BBB' : '#666', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       ▲
                     </button>
                     <button onClick={() => moveStep(i, 1)} disabled={i === editSteps.length - 1}
-                      style={{ width: 22, height: 22, border: 'none', borderRadius: 6, background: i === editSteps.length - 1 ? '#EEE' : '#E8D5C0', cursor: i === editSteps.length - 1 ? 'default' : 'pointer', fontSize: 11, fontWeight: 800, color: i === editSteps.length - 1 ? '#BBB' : '#666', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      style={{ width: 22, height: 22, border: 'none', borderRadius: 6, background: i === editSteps.length - 1 ? '#EEE' : '#C5D9EF', cursor: i === editSteps.length - 1 ? 'default' : 'pointer', fontSize: 11, fontWeight: 800, color: i === editSteps.length - 1 ? '#BBB' : '#666', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       ▼
                     </button>
                   </div>
@@ -689,7 +689,7 @@ export default function RoutinesTab() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setConfirmDeleteRoutine(false)} style={{
-                    flex: 1, padding: 10, background: '#F3F0EB', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', color: C.gray,
+                    flex: 1, padding: 10, background: '#E8EEF5', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', color: C.gray,
                   }}>Abbrechen</button>
                   <button onClick={deleteRoutine} style={{
                     flex: 1, padding: 10, background: C.rose, border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', color: 'white',

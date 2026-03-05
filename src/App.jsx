@@ -13,7 +13,7 @@ const TABS = [
 ]
 
 const SEED_HABITS = [
-  { name: 'Meditieren', emoji: '🧘', target: 1, streak: 0, color: '#E8832A' },
+  { name: 'Meditieren', emoji: '🧘', target: 1, streak: 0, color: '#1E6FBF' },
   { name: 'Sport & Bewegung', emoji: '🏃', target: 1, streak: 0, color: '#5A8A6A' },
   { name: 'Wasser trinken', emoji: '💧', target: 8, streak: 0, color: '#4A86B0' },
   { name: 'Lesen', emoji: '📚', target: 1, streak: 0, color: '#D95F5F' },
@@ -100,7 +100,10 @@ const SEED_CHALLENGES = [
   },
 ]
 
+let _seeding = false
 async function seedIfEmpty() {
+  if (_seeding) return
+  _seeding = true
   // Seed Habits
   const { data: existingHabits } = await supabase.from('habits').select('id').limit(1)
   if (!existingHabits || existingHabits.length === 0) {
@@ -168,15 +171,15 @@ export default function App() {
     return (
       <div style={{
         maxWidth: 430, margin: '0 auto', minHeight: '100vh',
-        background: '#FDF6EE', display: 'flex', flexDirection: 'column',
+        background: '#EFF5FC', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', gap: 16,
       }}>
         <div style={{ fontSize: 48 }}>⭐</div>
-        <div style={{ fontWeight: 800, fontSize: 22, color: '#E8832A' }}>Routine App</div>
+        <div style={{ fontWeight: 800, fontSize: 22, color: '#1E6FBF' }}>Routine App</div>
         <div style={{
           width: 44, height: 44,
-          border: '4px solid #E8D5C0',
-          borderTop: '4px solid #E8832A',
+          border: '4px solid #C5D9EF',
+          borderTop: '4px solid #1E6FBF',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
         }} />
@@ -189,14 +192,14 @@ export default function App() {
     return (
       <div style={{
         maxWidth: 430, margin: '0 auto', minHeight: '100vh',
-        background: '#FDF6EE', display: 'flex', flexDirection: 'column',
+        background: '#EFF5FC', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24,
       }}>
         <div style={{ fontSize: 48 }}>⚠️</div>
         <div style={{ fontWeight: 700, fontSize: 18, color: '#D95F5F', textAlign: 'center' }}>{error}</div>
         <button
           onClick={() => window.location.reload()}
-          style={{ padding: '12px 24px', background: '#E8832A', color: 'white', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+          style={{ padding: '12px 24px', background: '#1E6FBF', color: 'white', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
         >
           Erneut versuchen
         </button>
@@ -205,19 +208,19 @@ export default function App() {
   }
 
   return (
-    <div style={{ maxWidth: 430, margin: '0 auto', minHeight: '100vh', background: '#FDF6EE', position: 'relative' }}>
+    <div style={{ maxWidth: 430, margin: '0 auto', minHeight: '100vh', background: '#EFF5FC', position: 'relative' }}>
       {/* Sticky Header */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(253,246,238,0.95)',
+        background: 'rgba(239,245,252,0.95)',
         backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid #F0E0CC',
+        borderBottom: '1px solid #C5D9EF',
         padding: '12px 18px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 22 }}>⭐</span>
-          <span style={{ fontSize: 19, fontWeight: 900, color: '#E8832A', letterSpacing: '-0.3px' }}>Routine App</span>
+          <span style={{ fontSize: 19, fontWeight: 900, color: '#1E6FBF', letterSpacing: '-0.3px' }}>Routine App</span>
         </div>
         <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600 }}>{dateStr}</div>
       </div>
@@ -236,7 +239,7 @@ export default function App() {
         width: '100%', maxWidth: 430,
         background: 'rgba(255,255,255,0.97)',
         backdropFilter: 'blur(12px)',
-        borderTop: '1px solid #F0E0CC',
+        borderTop: '1px solid #C5D9EF',
         display: 'flex',
         paddingBottom: 'env(safe-area-inset-bottom, 4px)',
         zIndex: 200,
@@ -252,7 +255,7 @@ export default function App() {
                 flex: 1, padding: '10px 4px 10px', background: 'none', border: 'none',
                 cursor: 'pointer', display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 3,
-                color: active ? '#E8832A' : '#9CA3AF',
+                color: active ? '#1E6FBF' : '#9CA3AF',
                 transition: 'color 0.2s',
               }}
             >
@@ -261,7 +264,7 @@ export default function App() {
                 {tab.label}
               </span>
               {active && (
-                <div style={{ width: 20, height: 3, borderRadius: 2, background: '#E8832A', marginTop: 1 }} />
+                <div style={{ width: 20, height: 3, borderRadius: 2, background: '#1E6FBF', marginTop: 1 }} />
               )}
             </button>
           )

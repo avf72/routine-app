@@ -5,9 +5,9 @@ import { Card } from './ui/Card'
 import { SavedBadge } from './ui/SavedBadge'
 
 const C = {
-  bg: '#FDF6EE', primary: '#E8832A', sage: '#5A8A6A',
-  blue: '#4A86B0', rose: '#D95F5F', amber: '#C9923A',
-  white: '#FFFFFF', gray: '#6B7280', border: '#E8D5C0',
+  bg: '#EFF5FC', primary: '#1E6FBF', sage: '#2A9D8F',
+  blue: '#4A7FA5', rose: '#D95F5F', amber: '#E07B39',
+  white: '#FFFFFF', gray: '#6B7280', border: '#C5D9EF',
 }
 
 const TODAY = today()
@@ -214,10 +214,10 @@ export default function HabitsTab() {
 
       {/* Hero */}
       <div style={{
-        background: `linear-gradient(135deg, ${C.primary} 0%, ${C.amber} 100%)`,
+        background: `linear-gradient(135deg, ${C.primary} 0%, ${C.sage} 100%)`,
         borderRadius: 20, padding: '20px 20px', marginBottom: 14,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        boxShadow: '0 4px 20px rgba(232,131,42,0.3)',
+        boxShadow: '0 4px 20px rgba(30,111,191,0.3)',
       }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginBottom: 4 }}>Meine Gewohnheiten</div>
@@ -242,7 +242,7 @@ export default function HabitsTab() {
             const wl = weekLogs[d]
             const isDone = !isFuture && wl && wl.total > 0 && wl.done === wl.total
             const isPartial = !isFuture && wl && wl.done > 0 && wl.done < wl.total
-            let bg = '#F3F4F6', textColor = C.gray
+            let bg = '#E8EEF5', textColor = C.gray
             if (isDone) { bg = C.primary; textColor = 'white' }
             else if (isPartial) { bg = `${C.primary}55`; textColor = C.primary }
             else if (isToday) { bg = `${C.primary}18`; textColor = C.primary }
@@ -312,7 +312,7 @@ export default function HabitsTab() {
                         disabled={done <= 0}
                         style={{
                           width: 24, height: 24, borderRadius: '50%', border: 'none', flexShrink: 0,
-                          background: done > 0 ? `${col}20` : '#F3F0EB',
+                          background: done > 0 ? `${col}20` : '#E8EEF5',
                           color: done > 0 ? col : '#CCC',
                           fontWeight: 900, fontSize: 16, lineHeight: 1,
                           cursor: done > 0 ? 'pointer' : 'default',
@@ -327,7 +327,7 @@ export default function HabitsTab() {
                         {Math.round(pct * 100)}%
                       </span>
                     </div>
-                    <div style={{ height: 5, background: '#F3F0EB', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: 5, background: '#E8EEF5', borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct * 100}%`, background: col, borderRadius: 3, transition: 'width 0.3s ease' }} />
                     </div>
                   </div>
@@ -343,7 +343,7 @@ export default function HabitsTab() {
               {/* Check */}
               <div style={{
                 width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                background: completed ? col : '#F3F0EB',
+                background: completed ? col : '#E8EEF5',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 15, color: completed ? 'white' : C.gray,
                 fontWeight: 700, transition: 'all 0.2s',
@@ -356,7 +356,7 @@ export default function HabitsTab() {
                 onClick={e => { e.stopPropagation(); openEdit(habit) }}
                 style={{
                   width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                  background: '#F3F0EB', border: 'none', cursor: 'pointer',
+                  background: '#E8EEF5', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 16, color: C.gray, transition: 'background 0.2s',
                 }}
@@ -374,10 +374,10 @@ export default function HabitsTab() {
           <div style={{ fontWeight: 800, fontSize: 16, color: '#333', marginBottom: 14 }}>Neuen Habit hinzufügen</div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <input value={newEmoji} onChange={e => setNewEmoji(e.target.value)}
-              style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#FDF6EE' }} />
+              style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#F4F8FD' }} />
             <input value={newName} onChange={e => setNewName(e.target.value)}
               placeholder="Name des Habits" autoFocus
-              style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#FDF6EE' }} />
+              style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#F4F8FD' }} />
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
             {EMOJI_OPTIONS.map(em => (
@@ -395,7 +395,7 @@ export default function HabitsTab() {
             <span style={{ fontSize: 14, color: C.gray }}>× pro Tag</span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: 12, background: '#F3F0EB', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 600, color: C.gray }}>
+            <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: 12, background: '#E8EEF5', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 600, color: C.gray }}>
               Abbrechen
             </button>
             <button onClick={addHabit} style={{ flex: 2, padding: 12, background: C.primary, border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 700, color: 'white' }}>
@@ -426,17 +426,17 @@ export default function HabitsTab() {
             padding: '20px 20px 36px', animation: 'slideUp 0.3s ease',
           }}>
             {/* Handle */}
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0D8D0', margin: '0 auto 20px' }} />
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#C5D9EF', margin: '0 auto 20px' }} />
 
             <div style={{ fontWeight: 900, fontSize: 17, marginBottom: 16 }}>Habit bearbeiten</div>
 
             {/* Name & Emoji */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <input value={editEmoji} onChange={e => setEditEmoji(e.target.value)}
-                style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#FDF6EE' }} />
+                style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#F4F8FD' }} />
               <input value={editName} onChange={e => setEditName(e.target.value)}
                 placeholder="Name des Habits" autoFocus
-                style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#FDF6EE' }} />
+                style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#F4F8FD' }} />
             </div>
 
             {/* Emoji Picker */}
@@ -481,7 +481,7 @@ export default function HabitsTab() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setConfirmDelete(false)} style={{
-                    flex: 1, padding: 10, background: '#F3F0EB', border: 'none',
+                    flex: 1, padding: 10, background: '#E8EEF5', border: 'none',
                     borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', color: C.gray,
                   }}>
                     Abbrechen
