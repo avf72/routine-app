@@ -220,9 +220,6 @@ export default function RoutinesTab() {
     if (!rs.length) return 0
     return (rs.filter(s => logs[s.id]?.done).length / rs.length) * 100
   }
-  function getRoutineDuration(routineId) {
-    return getRoutineSteps(routineId).reduce((sum, s) => sum + (s.duration || 0), 0)
-  }
 
 
 
@@ -267,7 +264,6 @@ export default function RoutinesTab() {
         {routines.map((routine, index) => {
           const rs = getRoutineSteps(routine.id)
           const pct = getRoutineProgress(routine.id)
-          const duration = getRoutineDuration(routine.id)
           const expanded = expandedId === routine.id
           const doneSteps = rs.filter(s => logs[s.id]?.done).length
 
@@ -293,11 +289,11 @@ export default function RoutinesTab() {
                     <div style={{ fontWeight: 800, fontSize: 15, color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
                       {routine.name}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.gray, marginBottom: rs.length > 0 ? 6 : 0 }}>
-                      {duration > 0 && <span>{duration} Min.</span>}
-                      {duration > 0 && rs.length > 0 && <span>•</span>}
-                      {rs.length > 0 && <span>{doneSteps}/{rs.length} Schritte</span>}
-                    </div>
+                    {rs.length > 0 && (
+                      <div style={{ fontSize: 12, color: C.gray, marginBottom: 6 }}>
+                        {doneSteps}/{rs.length} Schritte
+                      </div>
+                    )}
                     {rs.length > 0 && (
                       <div style={{ height: 5, background: '#E8EEF5', borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? C.sage : C.primary, borderRadius: 3, transition: 'width 0.4s ease' }} />
@@ -376,9 +372,7 @@ export default function RoutinesTab() {
                             {step.name}
                           </span>
                         </div>
-                        {step.duration > 0 && (
-                          <span style={{ fontSize: 12, color: C.gray, flexShrink: 0 }}>{step.duration} Min</span>
-                        )}
+
                       </div>
                     )
                   })}
@@ -478,12 +472,7 @@ export default function RoutinesTab() {
                   />
 
                   {/* Duration */}
-                  <input
-                    type="number" min={0} value={step.duration}
-                    onChange={e => updateEditStep(i, 'duration', parseInt(e.target.value) || 0)}
-                    style={{ width: 48, padding: '7px 6px', border: `1.5px solid ${C.border}`, borderRadius: 9, fontSize: 12, textAlign: 'center', background: C.white, flexShrink: 0 }}
-                  />
-                  <span style={{ fontSize: 11, color: C.gray, flexShrink: 0 }}>Min</span>
+
 
                   {/* Delete Step */}
                   <button onClick={() => removeEditStep(i)}

@@ -33,6 +33,7 @@ export default function TechnikTab() {
   const [deletedStepIds, setDeletedStepIds] = useState([])
   const [confirmDeleteRoutine, setConfirmDeleteRoutine] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [dbError, setDbError] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -42,6 +43,7 @@ export default function TechnikTab() {
         supabase.from('technik_steps').select('*').order('position', { ascending: true }),
         supabase.from('technik_logs').select('*').eq('datum', TODAY),
       ])
+      if (rRes.error) { setDbError(true); setLoading(false); return }
       const loaded = rRes.data || []
       loaded.sort((a, b) => {
         if (a.position != null && b.position != null) return a.position - b.position
@@ -56,6 +58,7 @@ export default function TechnikTab() {
       setLogs(lmap)
     } catch (err) {
       console.error(err)
+      setDbError(true)
     } finally {
       setLoading(false)
     }
@@ -85,7 +88,7 @@ export default function TechnikTab() {
     if (error) {
       const { data: d2, error: e2 } = await supabase
         .from('technik_routines').insert({ name: newName.trim(), emoji: newEmoji }).select().single()
-      if (e2) { console.error('Routine hinzufügen fehlgeschlagen:', e2); return }
+      if (e2) { console.error('Technik hinzufügen fehlgeschlagen:', e2); setDbError(true); return }
       setRoutines(prev => [...prev, d2])
     } else {
       setRoutines(prev => [...prev, { ...data, position: pos }])
@@ -220,15 +223,23 @@ export default function TechnikTab() {
     if (!rs.length) return 0
     return (rs.filter(s => logs[s.id]?.done).length / rs.length) * 100
   }
-  function getRoutineDuration(routineId) {
-    return getRoutineSteps(routineId).reduce((sum, s) => sum + (s.duration || 0), 0)
-  }
 
 
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}>
       <div style={{ width: 36, height: 36, border: `3px solid ${C.border}`, borderTop: `3px solid ${C.primary}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
+
+  if (dbError) return (
+    <div style={{ padding: 24, textAlign: 'center' }}>
+      <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+      <div style={{ fontWeight: 700, fontSize: 15, color: '#D95F5F', marginBottom: 8 }}>Datenbank-Tabellen fehlen</div>
+      <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.6 }}>
+        Bitte führe das SQL-Setup für Technik in Supabase aus.<br/>
+        (siehe <code>supabase_setup.sql</code>)
+      </div>
     </div>
   )
 
@@ -267,7 +278,6 @@ export default function TechnikTab() {
         {routines.map((routine, index) => {
           const rs = getRoutineSteps(routine.id)
           const pct = getRoutineProgress(routine.id)
-          const duration = getRoutineDuration(routine.id)
           const expanded = expandedId === routine.id
           const doneSteps = rs.filter(s => logs[s.id]?.done).length
 
@@ -293,11 +303,11 @@ export default function TechnikTab() {
                     <div style={{ fontWeight: 800, fontSize: 15, color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
                       {routine.name}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.gray, marginBottom: rs.length > 0 ? 6 : 0 }}>
-                      {duration > 0 && <span>{duration} Min.</span>}
-                      {duration > 0 && rs.length > 0 && <span>•</span>}
-                      {rs.length > 0 && <span>{doneSteps}/{rs.length} Schritte</span>}
-                    </div>
+                    {rs.length > 0 && (
+                      <div style={{ fontSize: 12, color: C.gray, marginBottom: 6 }}>
+                        {doneSteps}/{rs.length} Schritte
+                      </div>
+                    )}
                     {rs.length > 0 && (
                       <div style={{ height: 5, background: '#E8EEF5', borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? C.sage : C.primary, borderRadius: 3, transition: 'width 0.4s ease' }} />
@@ -376,9 +386,7 @@ export default function TechnikTab() {
                             {step.name}
                           </span>
                         </div>
-                        {step.duration > 0 && (
-                          <span style={{ fontSize: 12, color: C.gray, flexShrink: 0 }}>{step.duration} Min</span>
-                        )}
+
                       </div>
                     )
                   })}
@@ -477,12 +485,7 @@ export default function TechnikTab() {
                   />
 
                   {/* Duration */}
-                  <input
-                    type="number" min={0} value={step.duration}
-                    onChange={e => updateEditStep(i, 'duration', parseInt(e.target.value) || 0)}
-                    style={{ width: 48, padding: '7px 6px', border: `1.5px solid ${C.border}`, borderRadius: 9, fontSize: 12, textAlign: 'center', background: C.white, flexShrink: 0 }}
-                  />
-                  <span style={{ fontSize: 11, color: C.gray, flexShrink: 0 }}>Min</span>
+
 
                   {/* Delete Step */}
                   <button onClick={() => removeEditStep(i)}
