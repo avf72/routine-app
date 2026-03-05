@@ -41,14 +41,32 @@ export default function HabitsTab() {
   const [editEmoji, setEditEmoji] = useState('⭐')
   const [editTarget, setEditTarget] = useState(1)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [sortMode, setSortMode] = useState(false)
   const weekDates = getWeekDates()
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const { data: habitsData, error: hErr } = await supabase
-        .from('habits').select('*').order('created_at', { ascending: true })
+        .from('habits').select('*')
       if (hErr) throw hErr
+      // Sort by position (nulls last), then created_at
+      ;(habitsData || []).sort((a, b) => {
+        if (a.position != null && b.position != null) return a.position - b.position
+        if (a.position != null) return -1
+        if (b.position != null) return 1
+        return new Date(a.created_at) - new Date(b.created_at)
+      })
+      // Initialize positions for habits without one
+      const toInit = (habitsData || []).filter(h => h.position == null)
+      if (toInit.length > 0) {
+        ;(habitsData || []).forEach((h, i) => {
+          if (h.position == null) {
+            h.position = i + 1
+            supabase.from('habits').update({ position: i + 1 }).eq('id', h.id)
+          }
+        })
+      }
 
       const allDates = weekDates
       const { data: allLogs } = await supabase
@@ -140,7 +158,7 @@ export default function HabitsTab() {
     if (!newName.trim()) return
     const { data, error } = await supabase
       .from('habits')
-      .insert({ name: newName.trim(), emoji: newEmoji, target: newTarget, streak: 0, color: C.primary })
+      .insert({ name: newName.trim(), emoji: newEmoji, target: newTarget, streak: 0, color: C.primary, position: habits.length + 1 })
       .select().single()
     if (error) return
     setHabits(h => [...h, data])
@@ -184,6 +202,15 @@ export default function HabitsTab() {
       closeEdit()
       flashSaved()
     }
+  }
+
+  function moveHabit(index, dir) {
+    const next = [...habits]
+    const targetIdx = index + dir
+    if (targetIdx < 0 || targetIdx >= next.length) return
+    ;[next[index], next[targetIdx]] = [next[targetIdx], next[index]]
+    setHabits(next)
+    next.forEach((h, i) => supabase.from('habits').update({ position: i + 1 }).eq('id', h.id))
   }
 
   function flashSaved() {
@@ -262,9 +289,28 @@ export default function HabitsTab() {
         </div>
       </Card>
 
+      {/* Habit List Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {habits.length} Habit{habits.length !== 1 ? 's' : ''}
+        </div>
+        <button
+          onClick={() => setSortMode(s => !s)}
+          style={{
+            padding: '5px 12px', borderRadius: 10,
+            background: sortMode ? C.primary : '#E8EEF5',
+            color: sortMode ? 'white' : C.gray,
+            border: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 700,
+          }}
+        >
+          {sortMode ? '✓ Fertig' : '↕ Sortieren'}
+        </button>
+      </div>
+
       {/* Habit List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
-        {habits.map(habit => {
+        {habits.map((habit, index) => {
           const done = logs[habit.id]?.done || 0
           const completed = done >= habit.target
           const pct = habit.target > 1 ? Math.min(done / habit.target, 1) : 0
@@ -272,21 +318,21 @@ export default function HabitsTab() {
           return (
             <div
               key={habit.id}
-              onClick={() => toggleHabit(habit)}
+              onClick={sortMode ? undefined : () => toggleHabit(habit)}
               style={{
                 background: C.white, borderRadius: 16, padding: '14px 16px',
                 display: 'flex', alignItems: 'center', gap: 14,
-                border: `2px solid ${completed ? col + '60' : 'transparent'}`,
-                boxShadow: completed ? `0 2px 12px ${col}25` : '0 1px 6px rgba(0,0,0,0.05)',
-                cursor: 'pointer', transition: 'all 0.2s ease',
-                transform: completed ? 'scale(1.01)' : 'scale(1)',
+                border: `2px solid ${!sortMode && completed ? col + '60' : 'transparent'}`,
+                boxShadow: !sortMode && completed ? `0 2px 12px ${col}25` : '0 1px 6px rgba(0,0,0,0.05)',
+                cursor: sortMode ? 'default' : 'pointer', transition: 'all 0.2s ease',
+                transform: !sortMode && completed ? 'scale(1.01)' : 'scale(1)',
                 animation: 'fadeIn 0.3s ease',
               }}
             >
               {/* Icon */}
               <div style={{
                 width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-                background: completed ? col : `${col}20`,
+                background: !sortMode && completed ? col : `${col}20`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 24, transition: 'all 0.2s',
               }}>
@@ -297,16 +343,15 @@ export default function HabitsTab() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontWeight: 700, fontSize: 15, color: '#222',
-                  textDecoration: completed && habit.target === 1 ? 'line-through' : 'none',
-                  opacity: completed && habit.target === 1 ? 0.5 : 1,
+                  textDecoration: !sortMode && completed && habit.target === 1 ? 'line-through' : 'none',
+                  opacity: !sortMode && completed && habit.target === 1 ? 0.5 : 1,
                   transition: 'all 0.2s',
                 }}>
                   {habit.name}
                 </div>
-                {habit.target > 1 ? (
+                {!sortMode && habit.target > 1 ? (
                   <div style={{ marginTop: 5 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      {/* Minus */}
                       <button
                         onClick={e => { e.stopPropagation(); decrementHabit(habit) }}
                         disabled={done <= 0}
@@ -319,50 +364,72 @@ export default function HabitsTab() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                       >−</button>
-                      {/* Counter */}
-                      <span style={{ fontSize: 12, fontWeight: 700, color: C.gray }}>
-                        {done} / {habit.target}
-                      </span>
-                      <span style={{ fontSize: 11, color: C.gray, marginLeft: 'auto' }}>
-                        {Math.round(pct * 100)}%
-                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.gray }}>{done} / {habit.target}</span>
+                      <span style={{ fontSize: 11, color: C.gray, marginLeft: 'auto' }}>{Math.round(pct * 100)}%</span>
                     </div>
                     <div style={{ height: 5, background: '#E8EEF5', borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct * 100}%`, background: col, borderRadius: 3, transition: 'width 0.3s ease' }} />
                     </div>
                   </div>
-                ) : (
-                  habit.streak > 0 && (
-                    <div style={{ fontSize: 12, color: '#F39C12', marginTop: 2, fontWeight: 600 }}>
-                      🔥 {habit.streak} {habit.streak === 1 ? 'Tag' : 'Tage'} Serie
-                    </div>
-                  )
-                )}
+                ) : !sortMode && habit.streak > 0 ? (
+                  <div style={{ fontSize: 12, color: '#F39C12', marginTop: 2, fontWeight: 600 }}>
+                    🔥 {habit.streak} {habit.streak === 1 ? 'Tag' : 'Tage'} Serie
+                  </div>
+                ) : null}
               </div>
 
-              {/* Check */}
-              <div style={{
-                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                background: completed ? col : '#E8EEF5',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 15, color: completed ? 'white' : C.gray,
-                fontWeight: 700, transition: 'all 0.2s',
-              }}>
-                {completed ? '✓' : habit.target > 1 ? done : ''}
-              </div>
-
-              {/* Edit Button */}
-              <button
-                onClick={e => { e.stopPropagation(); openEdit(habit) }}
-                style={{
-                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                  background: '#E8EEF5', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16, color: C.gray, transition: 'background 0.2s',
-                }}
-              >
-                ⋯
-              </button>
+              {sortMode ? (
+                /* Sort Mode: ▲/▼ Buttons */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
+                  <button
+                    onClick={e => { e.stopPropagation(); moveHabit(index, -1) }}
+                    disabled={index === 0}
+                    style={{
+                      width: 30, height: 30, borderRadius: 8, border: 'none',
+                      background: index === 0 ? '#E8EEF5' : `${C.primary}20`,
+                      color: index === 0 ? '#CCC' : C.primary,
+                      cursor: index === 0 ? 'default' : 'pointer',
+                      fontSize: 12, fontWeight: 800,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >▲</button>
+                  <button
+                    onClick={e => { e.stopPropagation(); moveHabit(index, 1) }}
+                    disabled={index === habits.length - 1}
+                    style={{
+                      width: 30, height: 30, borderRadius: 8, border: 'none',
+                      background: index === habits.length - 1 ? '#E8EEF5' : `${C.primary}20`,
+                      color: index === habits.length - 1 ? '#CCC' : C.primary,
+                      cursor: index === habits.length - 1 ? 'default' : 'pointer',
+                      fontSize: 12, fontWeight: 800,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >▼</button>
+                </div>
+              ) : (
+                <>
+                  {/* Check */}
+                  <div style={{
+                    width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                    background: completed ? col : '#E8EEF5',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 15, color: completed ? 'white' : C.gray,
+                    fontWeight: 700, transition: 'all 0.2s',
+                  }}>
+                    {completed ? '✓' : habit.target > 1 ? done : ''}
+                  </div>
+                  {/* Edit Button */}
+                  <button
+                    onClick={e => { e.stopPropagation(); openEdit(habit) }}
+                    style={{
+                      width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                      background: '#E8EEF5', border: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 16, color: C.gray,
+                    }}
+                  >⋯</button>
+                </>
+              )}
             </div>
           )
         })}
