@@ -275,6 +275,13 @@ export default function ChallengesTab() {
   const [showSaved, setShowSaved] = useState(false)
   const [view, setView] = useState('overview') // 'overview' | 'active'
 
+  // Edit state
+  const [editingChallenge, setEditingChallenge] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editEmoji, setEditEmoji] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [confirmDeleteChallenge, setConfirmDeleteChallenge] = useState(false)
+
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -332,6 +339,40 @@ export default function ChallengesTab() {
   function flashSaved() {
     setShowSaved(true)
     setTimeout(() => setShowSaved(false), 2000)
+  }
+
+  function openEdit(ch) {
+    setEditingChallenge(ch)
+    setEditName(ch.name)
+    setEditEmoji(ch.emoji)
+    setEditDescription(ch.description || '')
+    setConfirmDeleteChallenge(false)
+  }
+
+  function closeEdit() {
+    setEditingChallenge(null)
+    setConfirmDeleteChallenge(false)
+  }
+
+  async function saveChallenge() {
+    if (!editName.trim() || !editingChallenge) return
+    const updates = { name: editName.trim(), emoji: editEmoji, description: editDescription }
+    const { error } = await supabase.from('challenges').update(updates).eq('id', editingChallenge.id)
+    if (!error) {
+      setChallenges(prev => prev.map(c => c.id === editingChallenge.id ? { ...c, ...updates } : c))
+      closeEdit()
+      flashSaved()
+    }
+  }
+
+  async function deleteChallenge() {
+    if (!editingChallenge) return
+    const { error } = await supabase.from('challenges').delete().eq('id', editingChallenge.id)
+    if (!error) {
+      setChallenges(prev => prev.filter(c => c.id !== editingChallenge.id))
+      closeEdit()
+      flashSaved()
+    }
   }
 
   const activeChallenges = challenges.filter(c => c.started_at && c.current_day < 30)
@@ -453,6 +494,14 @@ export default function ChallengesTab() {
                       >
                         Zurücksetzen
                       </button>
+                      <button
+                        onClick={() => openEdit(ch)}
+                        style={{
+                          width: 40, padding: '11px', background: '#F3F0EB',
+                          border: 'none', borderRadius: 12, color: C.gray,
+                          fontWeight: 700, fontSize: 16, cursor: 'pointer', flexShrink: 0,
+                        }}
+                      >⋯</button>
                     </div>
                   </div>
                 </div>
@@ -498,34 +547,152 @@ export default function ChallengesTab() {
             {availableChallenges.map(ch => (
               <div
                 key={ch.id}
-                onClick={() => setSelectedChallenge(ch)}
                 style={{
                   background: C.white, borderRadius: 16, padding: '16px 14px',
-                  cursor: 'pointer', transition: 'all 0.2s',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
-                  animation: 'fadeIn 0.3s ease',
+                  transition: 'all 0.2s', boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
+                  animation: 'fadeIn 0.3s ease', position: 'relative',
                 }}
               >
-                <div style={{
-                  width: 44, height: 44, borderRadius: 12, marginBottom: 10,
-                  background: `${ch.color || C.primary}18`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
-                }}>
-                  {ch.emoji}
-                </div>
-                <div style={{ fontWeight: 800, fontSize: 13, color: '#333', marginBottom: 4, lineHeight: 1.3 }}>
-                  {ch.name}
-                </div>
-                <div style={{ fontSize: 11, color: C.gray }}>30 Tage</div>
-                <div style={{
-                  marginTop: 10, fontSize: 11, fontWeight: 700, padding: '4px 10px',
-                  background: `${ch.color || C.primary}15`, color: ch.color || C.primary,
-                  borderRadius: 8, display: 'inline-block',
-                }}>
-                  Starten →
+                <button onClick={() => openEdit(ch)} style={{
+                  position: 'absolute', top: 8, right: 8,
+                  width: 26, height: 26, borderRadius: '50%',
+                  background: '#F3F0EB', border: 'none', cursor: 'pointer',
+                  fontSize: 14, color: C.gray, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>⋯</button>
+                <div onClick={() => setSelectedChallenge(ch)} style={{ cursor: 'pointer' }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 12, marginBottom: 10,
+                    background: `${ch.color || C.primary}18`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
+                  }}>
+                    {ch.emoji}
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: '#333', marginBottom: 4, lineHeight: 1.3 }}>
+                    {ch.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.gray }}>30 Tage</div>
+                  <div style={{
+                    marginTop: 10, fontSize: 11, fontWeight: 700, padding: '4px 10px',
+                    background: `${ch.color || C.primary}15`, color: ch.color || C.primary,
+                    borderRadius: 8, display: 'inline-block',
+                  }}>
+                    Starten →
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Challenge Modal */}
+      {editingChallenge && (
+        <div
+          onClick={closeEdit}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 500, display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 430, margin: '0 auto',
+              background: C.white, borderRadius: '24px 24px 0 0',
+              padding: '24px 20px 40px', animation: 'slideUp 0.3s ease',
+              maxHeight: '85vh', overflowY: 'auto',
+            }}
+          >
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0D8D0', margin: '0 auto 20px' }} />
+            <div style={{ fontWeight: 900, fontSize: 18, color: '#222', marginBottom: 20 }}>Challenge bearbeiten</div>
+
+            {/* Emoji */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Emoji</div>
+              <input
+                value={editEmoji}
+                onChange={e => setEditEmoji(e.target.value)}
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: 12,
+                  border: `1.5px solid ${C.border}`, fontSize: 22, outline: 'none',
+                  background: '#FAFAF8', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Name */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</div>
+              <input
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: 12,
+                  border: `1.5px solid ${C.border}`, fontSize: 15, outline: 'none',
+                  background: '#FAFAF8', fontWeight: 600, boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Description */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Beschreibung</div>
+              <textarea
+                value={editDescription}
+                onChange={e => setEditDescription(e.target.value)}
+                rows={4}
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: 12,
+                  border: `1.5px solid ${C.border}`, fontSize: 14, outline: 'none',
+                  background: '#FAFAF8', resize: 'none', lineHeight: 1.5,
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <button
+              onClick={saveChallenge}
+              style={{
+                width: '100%', padding: '15px', background: C.primary,
+                border: 'none', borderRadius: 14, color: 'white',
+                fontWeight: 800, fontSize: 15, cursor: 'pointer', marginBottom: 10,
+              }}
+            >
+              Speichern
+            </button>
+
+            {confirmDeleteChallenge ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={deleteChallenge}
+                  style={{
+                    flex: 1, padding: '13px', background: C.rose,
+                    border: 'none', borderRadius: 12, color: 'white',
+                    fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  Ja, löschen
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteChallenge(false)}
+                  style={{
+                    flex: 1, padding: '13px', background: '#F3F0EB',
+                    border: 'none', borderRadius: 12, color: C.gray,
+                    fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDeleteChallenge(true)}
+                style={{
+                  width: '100%', padding: '13px', background: 'none',
+                  border: `1.5px solid ${C.border}`, borderRadius: 12, color: C.rose,
+                  fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                }}
+              >
+                Challenge löschen
+              </button>
+            )}
           </div>
         </div>
       )}
