@@ -119,6 +119,23 @@ export default function HabitsTab() {
     flashSaved()
   }
 
+  async function decrementHabit(habit) {
+    const log = logs[habit.id]
+    if (!log || log.done <= 0) return
+    const prev = log.done
+    const next = prev - 1
+    setLogs(l => ({ ...l, [habit.id]: { ...l[habit.id], done: next } }))
+    const { error } = await supabase.from('habit_logs').update({ done: next }).eq('id', log.id)
+    if (error) { setLogs(l => ({ ...l, [habit.id]: { ...l[habit.id], done: prev } })); return }
+    // Streak: war fertig, jetzt nicht mehr
+    if (prev >= habit.target && next < habit.target) {
+      const ns = Math.max(0, (habit.streak || 0) - 1)
+      await supabase.from('habits').update({ streak: ns }).eq('id', habit.id)
+      setHabits(h => h.map(hh => hh.id === habit.id ? { ...hh, streak: ns } : hh))
+    }
+    flashSaved()
+  }
+
   async function addHabit() {
     if (!newName.trim()) return
     const { data, error } = await supabase
@@ -288,9 +305,27 @@ export default function HabitsTab() {
                 </div>
                 {habit.target > 1 ? (
                   <div style={{ marginTop: 5 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.gray, marginBottom: 3 }}>
-                      <span>{done} / {habit.target}</span>
-                      <span>{Math.round(pct * 100)}%</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      {/* Minus */}
+                      <button
+                        onClick={e => { e.stopPropagation(); decrementHabit(habit) }}
+                        disabled={done <= 0}
+                        style={{
+                          width: 24, height: 24, borderRadius: '50%', border: 'none', flexShrink: 0,
+                          background: done > 0 ? `${col}20` : '#F3F0EB',
+                          color: done > 0 ? col : '#CCC',
+                          fontWeight: 900, fontSize: 16, lineHeight: 1,
+                          cursor: done > 0 ? 'pointer' : 'default',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >−</button>
+                      {/* Counter */}
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.gray }}>
+                        {done} / {habit.target}
+                      </span>
+                      <span style={{ fontSize: 11, color: C.gray, marginLeft: 'auto' }}>
+                        {Math.round(pct * 100)}%
+                      </span>
                     </div>
                     <div style={{ height: 5, background: '#F3F0EB', borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct * 100}%`, background: col, borderRadius: 3, transition: 'width 0.3s ease' }} />
