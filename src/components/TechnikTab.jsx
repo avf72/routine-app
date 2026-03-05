@@ -421,46 +421,6 @@ export default function TechnikTab() {
         </Card>
       )}
 
-      {/* Template Modal */}
-      {showTemplate && (
-        <div onClick={() => setShowTemplate(false)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'flex-end',
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            width: '100%', maxWidth: 430, margin: '0 auto',
-            background: C.white, borderRadius: '24px 24px 0 0',
-            padding: '20px 16px 32px', animation: 'slideUp 0.3s ease',
-            maxHeight: '85vh', overflowY: 'auto',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontWeight: 900, fontSize: 17 }}>Technik-Vorlagen</div>
-              <button onClick={() => setShowTemplate(false)} style={{ background: '#E8EEF5', border: 'none', borderRadius: 20, width: 30, height: 30, cursor: 'pointer', fontSize: 16 }}>×</button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {ROUTINE_TEMPLATES.map(t => {
-                const tc = C.primary
-                const dur = t.steps.reduce((sum, s) => sum + s.duration, 0)
-                return (
-                  <div key={t.name} onClick={() => addFromTemplate(t)} style={{
-                    background: '#F0F5FB', borderRadius: 14, padding: 14,
-                    display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-                  }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${tc}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                      {t.emoji}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
-                      <div style={{ fontSize: 12, color: C.gray }}>{dur} Min. • {t.steps.length} Schritte</div>
-                    </div>
-                    <div style={{ fontSize: 18, color: C.primary }}>+</div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Edit Routine Modal ── */}
       {editingRoutine && (
         <div onClick={closeEdit} style={{
