@@ -11,25 +11,13 @@ const C = {
 }
 
 const TODAY = today()
-const WEEK_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
-function getWeekDates() {
-  const d = new Date()
-  const dow = d.getDay()
-  const mondayOffset = dow === 0 ? -6 : 1 - dow
-  return Array.from({ length: 7 }, (_, i) => {
-    const dd = new Date(d)
-    dd.setDate(d.getDate() + mondayOffset + i)
-    return dd.toISOString().split('T')[0]
-  })
-}
 
 const EMOJI_OPTIONS = ['⭐', '🏃', '💧', '📚', '🧘', '💪', '🍎', '😴', '🎯', '✍️', '🎸', '🌿', '🧹', '☕', '🚶', '🎨', '🙏', '📝']
 
 export default function HabitsTab() {
   const [habits, setHabits] = useState([])
   const [logs, setLogs] = useState({})
-  const [weekLogs, setWeekLogs] = useState({})
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [newName, setNewName] = useState('')
@@ -42,7 +30,6 @@ export default function HabitsTab() {
   const [editTarget, setEditTarget] = useState(1)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [sortMode, setSortMode] = useState(false)
-  const weekDates = getWeekDates()
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -68,13 +55,11 @@ export default function HabitsTab() {
         })
       }
 
-      const allDates = weekDates
       const { data: allLogs } = await supabase
-        .from('habit_logs').select('*').in('datum', allDates)
+        .from('habit_logs').select('*').eq('datum', TODAY)
 
-      const todayLogs = (allLogs || []).filter(l => l.datum === TODAY)
       const logsMap = {}
-      for (const l of todayLogs) logsMap[l.habit_id] = { done: l.done, id: l.id }
+      for (const l of allLogs || []) logsMap[l.habit_id] = { done: l.done, id: l.id }
 
       if (habitsData) {
         for (const h of habitsData) {
@@ -86,20 +71,8 @@ export default function HabitsTab() {
         }
       }
 
-      const wMap = {}
-      for (const d of weekDates) {
-        const dayLogs = (allLogs || []).filter(l => l.datum === d)
-        const total = (habitsData || []).length
-        const done = dayLogs.filter(l => {
-          const h = (habitsData || []).find(hh => hh.id === l.habit_id)
-          return h && l.done >= h.target
-        }).length
-        wMap[d] = { done, total }
-      }
-
       setHabits(habitsData || [])
       setLogs(logsMap)
-      setWeekLogs(wMap)
     } catch (err) {
       console.error(err)
     } finally {
@@ -160,7 +133,7 @@ export default function HabitsTab() {
       .from('habits')
       .insert({ name: newName.trim(), emoji: newEmoji, target: newTarget, streak: 0, color: C.primary })
       .select().single()
-    if (error) { console.error('Habit hinzufügen fehlgeschlagen:', error); return }
+    if (error) { console.error('Training hinzufügen fehlgeschlagen:', error); return }
     const pos = habits.length + 1
     await supabase.from('habits').update({ position: pos }).eq('id', data.id)
     setHabits(h => [...h, { ...data, position: pos }])
@@ -252,49 +225,17 @@ export default function HabitsTab() {
           <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginBottom: 4 }}>Meine Gewohnheiten</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }}>{greeting()}</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
-            {doneCount} / {habits.length} heute erledigt
+            {doneCount} / {habits.length} diese Woche erledigt
           </div>
         </div>
         <Ring percent={progress} size={74} color="white" trackColor="rgba(255,255,255,0.25)" />
       </div>
 
-      {/* Week */}
-      <Card style={{ marginBottom: 14, padding: '14px 16px' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, marginBottom: 10, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-          Diese Woche
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          {WEEK_LABELS.map((label, i) => {
-            const d = weekDates[i]
-            const isToday = d === TODAY
-            const isFuture = d > TODAY
-            const wl = weekLogs[d]
-            const isDone = !isFuture && wl && wl.total > 0 && wl.done === wl.total
-            const isPartial = !isFuture && wl && wl.done > 0 && wl.done < wl.total
-            let bg = '#E8EEF5', textColor = C.gray
-            if (isDone) { bg = C.primary; textColor = 'white' }
-            else if (isPartial) { bg = `${C.primary}55`; textColor = C.primary }
-            else if (isToday) { bg = `${C.primary}18`; textColor = C.primary }
-            return (
-              <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 500, color: isToday ? C.primary : C.gray }}>{label}</div>
-                <div style={{
-                  width: 30, height: 30, borderRadius: '50%', background: bg, color: textColor,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
-                  border: isToday ? `2px solid ${C.primary}` : '2px solid transparent', transition: 'all 0.2s',
-                }}>
-                  {isDone ? '✓' : isPartial ? wl.done : ''}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </Card>
 
       {/* Habit List Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          {habits.length} Habit{habits.length !== 1 ? 's' : ''}
+          {habits.length} Training{habits.length !== 1 ? 's' : ''}
         </div>
         <button
           onClick={() => setSortMode(s => !s)}
@@ -445,7 +386,7 @@ export default function HabitsTab() {
             <input value={newEmoji} onChange={e => setNewEmoji(e.target.value)}
               style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#F4F8FD' }} />
             <input value={newName} onChange={e => setNewName(e.target.value)}
-              placeholder="Name des Habits" autoFocus
+              placeholder="Name des Trainings" autoFocus
               style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#F4F8FD' }} />
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
@@ -479,7 +420,7 @@ export default function HabitsTab() {
           borderRadius: 16, color: C.primary, fontSize: 15, fontWeight: 700,
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
-          + Neuen Habit hinzufügen
+          + Neues Training hinzufügen
         </button>
       )}
 
@@ -541,7 +482,7 @@ export default function HabitsTab() {
                 width: '100%', padding: 12, background: '#FFF0F0', border: `1.5px solid ${C.rose}30`,
                 borderRadius: 14, color: C.rose, fontWeight: 700, fontSize: 14, cursor: 'pointer',
               }}>
-                🗑 Habit löschen
+                🗑 Training löschen
               </button>
             ) : (
               <div style={{ background: '#FFF0F0', borderRadius: 14, padding: 14 }}>

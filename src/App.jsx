@@ -6,7 +6,7 @@ import TasksTab from './components/TasksTab'
 import ChallengesTab from './components/ChallengesTab'
 
 const TABS = [
-  { id: 'habits', icon: '🏆', label: 'Habits' },
+  { id: 'habits', icon: '🏆', label: 'Trainingswoche' },
   { id: 'routines', icon: '🔄', label: 'Routinen' },
   { id: 'tasks', icon: '✅', label: 'Aufgaben' },
   { id: 'challenges', icon: '🎯', label: 'Challenges' },
