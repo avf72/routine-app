@@ -10,13 +10,6 @@ const C = {
 }
 const TODAY = today()
 
-const TAG_TABS = [
-  { id: 'morgen', label: 'Morgen', icon: '🌅' },
-  { id: 'nachmittag', label: 'Nachmittag', icon: '☀️' },
-  { id: 'abend', label: 'Abend', icon: '🌙' },
-  { id: 'letzte', label: 'Letzte', icon: '🕐' },
-]
-
 const ROUTINE_TEMPLATES = [
   {
     name: 'Morning Success', emoji: '🌟', time: '06:00', tag: 'morgen',
@@ -117,29 +110,25 @@ const ROUTINE_TEMPLATES = [
   },
 ]
 
-const tagColors = { morgen: '#E07B39', nachmittag: '#1E6FBF', abend: '#7B5EA7' }
 
 export default function RoutinesTab() {
   const [routines, setRoutines] = useState([])
   const [steps, setSteps] = useState([])
   const [logs, setLogs] = useState({})
   const [loading, setLoading] = useState(true)
-  const [activeTag, setActiveTag] = useState('morgen')
   const [expandedId, setExpandedId] = useState(null)
   const [showTemplate, setShowTemplate] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [showSaved, setShowSaved] = useState(false)
   const [newName, setNewName] = useState('')
   const [newEmoji, setNewEmoji] = useState('🔄')
-  const [newTime, setNewTime] = useState('07:00')
-  const [newTag, setNewTag] = useState('morgen')
+
+  const [sortMode, setSortMode] = useState(false)
 
   // Edit state
   const [editingRoutine, setEditingRoutine] = useState(null)
   const [editName, setEditName] = useState('')
   const [editEmoji, setEditEmoji] = useState('')
-  const [editTime, setEditTime] = useState('')
-  const [editTag, setEditTag] = useState('morgen')
   const [editSteps, setEditSteps] = useState([])
   const [deletedStepIds, setDeletedStepIds] = useState([])
   const [confirmDeleteRoutine, setConfirmDeleteRoutine] = useState(false)
@@ -153,7 +142,14 @@ export default function RoutinesTab() {
         supabase.from('routine_steps').select('*').order('position', { ascending: true }),
         supabase.from('routine_logs').select('*').eq('datum', TODAY),
       ])
-      setRoutines(rRes.data || [])
+      const loaded = rRes.data || []
+      loaded.sort((a, b) => {
+        if (a.position != null && b.position != null) return a.position - b.position
+        if (a.position != null) return -1
+        if (b.position != null) return 1
+        return 0
+      })
+      setRoutines(loaded)
       setSteps(sRes.data || [])
       const lmap = {}
       for (const l of lRes.data || []) lmap[l.step_id] = { done: l.done, id: l.id }
@@ -182,8 +178,16 @@ export default function RoutinesTab() {
 
   async function addFromTemplate(tmpl) {
     const { steps: tmplSteps, ...routineData } = tmpl
-    const { data: nr, error } = await supabase.from('routines').insert(routineData).select().single()
-    if (error) return
+    const pos = routines.length + 1
+    let nr
+    const { data: d1, error: e1 } = await supabase.from('routines').insert({ ...routineData, position: pos }).select().single()
+    if (e1) {
+      const { data: d2, error: e2 } = await supabase.from('routines').insert(routineData).select().single()
+      if (e2) return
+      nr = d2
+    } else {
+      nr = { ...d1, position: pos }
+    }
     if (tmplSteps) {
       const sd = tmplSteps.map((s, i) => ({ ...s, routine_id: nr.id, position: i + 1 }))
       const { data: ns } = await supabase.from('routine_steps').insert(sd).select()
@@ -196,13 +200,28 @@ export default function RoutinesTab() {
 
   async function addRoutine() {
     if (!newName.trim()) return
+    const pos = routines.length + 1
     const { data, error } = await supabase
-      .from('routines').insert({ name: newName.trim(), emoji: newEmoji, time: newTime, tag: newTag }).select().single()
-    if (!error && data) {
-      setRoutines(prev => [...prev, data])
-      setNewName(''); setShowAdd(false)
-      flashSaved()
+      .from('routines').insert({ name: newName.trim(), emoji: newEmoji, position: pos }).select().single()
+    if (error) {
+      const { data: d2, error: e2 } = await supabase
+        .from('routines').insert({ name: newName.trim(), emoji: newEmoji }).select().single()
+      if (e2) { console.error('Routine hinzufügen fehlgeschlagen:', e2); return }
+      setRoutines(prev => [...prev, d2])
+    } else {
+      setRoutines(prev => [...prev, { ...data, position: pos }])
     }
+    setNewName(''); setShowAdd(false)
+    flashSaved()
+  }
+
+  function moveRoutine(index, dir) {
+    const next = [...routines]
+    const targetIdx = index + dir
+    if (targetIdx < 0 || targetIdx >= next.length) return
+    ;[next[index], next[targetIdx]] = [next[targetIdx], next[index]]
+    setRoutines(next)
+    next.forEach((r, i) => supabase.from('routines').update({ position: i + 1 }).eq('id', r.id))
   }
 
   // ── Edit Routine ──────────────────────────────────────────
@@ -215,8 +234,6 @@ export default function RoutinesTab() {
     setEditingRoutine(routine)
     setEditName(routine.name)
     setEditEmoji(routine.emoji)
-    setEditTime(routine.time)
-    setEditTag(routine.tag)
     setEditSteps(rs)
     setDeletedStepIds([])
     setConfirmDeleteRoutine(false)
@@ -255,7 +272,7 @@ export default function RoutinesTab() {
     try {
       // 1. Update routine metadata
       await supabase.from('routines')
-        .update({ name: editName.trim(), emoji: editEmoji, time: editTime, tag: editTag })
+        .update({ name: editName.trim(), emoji: editEmoji })
         .eq('id', editingRoutine.id)
 
       // 2. Delete removed steps
@@ -285,7 +302,7 @@ export default function RoutinesTab() {
       // 4. Update local state
       setRoutines(prev => prev.map(r =>
         r.id === editingRoutine.id
-          ? { ...r, name: editName.trim(), emoji: editEmoji, time: editTime, tag: editTag }
+          ? { ...r, name: editName.trim(), emoji: editEmoji }
           : r
       ))
       setSteps(prev => [
@@ -328,9 +345,7 @@ export default function RoutinesTab() {
     return getRoutineSteps(routineId).reduce((sum, s) => sum + (s.duration || 0), 0)
   }
 
-  let displayRoutines = activeTag === 'letzte'
-    ? [...routines].slice(-5).reverse()
-    : routines.filter(r => r.tag === activeTag)
+
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}>
@@ -342,43 +357,39 @@ export default function RoutinesTab() {
     <div style={{ padding: '16px 16px 0' }}>
       <SavedBadge visible={showSaved} />
 
-      {/* Tag Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {TAG_TABS.map(tab => {
-          const active = activeTag === tab.id
-          return (
-            <button key={tab.id} onClick={() => setActiveTag(tab.id)} style={{
-              flex: 1, minWidth: 68, padding: '8px 10px',
-              background: active ? C.primary : C.white,
-              color: active ? 'white' : C.gray,
-              border: `1.5px solid ${active ? C.primary : C.border}`,
-              borderRadius: 12, cursor: 'pointer',
-              fontSize: 12, fontWeight: active ? 800 : 600,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-              transition: 'all 0.2s', whiteSpace: 'nowrap',
-            }}>
-              <span style={{ fontSize: 16 }}>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          )
-        })}
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.gray, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {routines.length} Routine{routines.length !== 1 ? 'n' : ''}
+        </div>
+        <button
+          onClick={() => setSortMode(s => !s)}
+          style={{
+            padding: '5px 12px', borderRadius: 10,
+            background: sortMode ? C.primary : '#E8EEF5',
+            color: sortMode ? 'white' : C.gray,
+            border: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 700,
+          }}
+        >
+          {sortMode ? '✓ Fertig' : '↕ Sortieren'}
+        </button>
       </div>
 
       {/* Routine Cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 14 }}>
-        {displayRoutines.length === 0 && (
+        {routines.length === 0 && (
           <div style={{ textAlign: 'center', padding: '32px 16px', color: C.gray }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Keine Routinen vorhanden</div>
             <div style={{ fontSize: 13, marginTop: 4 }}>Füge eine Vorlage oder eigene Routine hinzu</div>
           </div>
         )}
-        {displayRoutines.map(routine => {
+        {routines.map((routine, index) => {
           const rs = getRoutineSteps(routine.id)
           const pct = getRoutineProgress(routine.id)
           const duration = getRoutineDuration(routine.id)
           const expanded = expandedId === routine.id
-          const tagColor = tagColors[routine.tag] || C.primary
           const doneSteps = rs.filter(s => logs[s.id]?.done).length
 
           return (
@@ -390,12 +401,12 @@ export default function RoutinesTab() {
               {/* Header */}
               <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div
-                  onClick={() => setExpandedId(expanded ? null : routine.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, cursor: 'pointer', minWidth: 0 }}
+                  onClick={() => !sortMode && setExpandedId(expanded ? null : routine.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, cursor: sortMode ? 'default' : 'pointer', minWidth: 0 }}
                 >
                   <div style={{
                     width: 46, height: 46, borderRadius: 14, flexShrink: 0,
-                    background: `${tagColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+                    background: `${C.primary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
                   }}>
                     {routine.emoji}
                   </div>
@@ -408,34 +419,62 @@ export default function RoutinesTab() {
                         Täglich
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.gray, marginBottom: 6 }}>
-                      <span>⏰ {routine.time}</span>
-                      <span>•</span>
-                      <span>{duration} Min.</span>
-                      <span>•</span>
-                      <span>{doneSteps}/{rs.length} Schritte</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.gray, marginBottom: rs.length > 0 ? 6 : 0 }}>
+                      {duration > 0 && <span>{duration} Min.</span>}
+                      {duration > 0 && rs.length > 0 && <span>•</span>}
+                      {rs.length > 0 && <span>{doneSteps}/{rs.length} Schritte</span>}
                     </div>
-                    <div style={{ height: 5, background: '#E8EEF5', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? C.sage : tagColor, borderRadius: 3, transition: 'width 0.4s ease' }} />
-                    </div>
+                    {rs.length > 0 && (
+                      <div style={{ height: 5, background: '#E8EEF5', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? C.sage : C.primary, borderRadius: 3, transition: 'width 0.4s ease' }} />
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: 16, color: C.gray, flexShrink: 0, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'none' }}>▾</div>
+                  {!sortMode && <div style={{ fontSize: 16, color: C.gray, flexShrink: 0, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'none' }}>▾</div>}
                 </div>
 
-                {/* Edit Button */}
-                <button
-                  onClick={e => { e.stopPropagation(); openEdit(routine) }}
-                  style={{
-                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: '#E8EEF5', border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16, color: C.gray,
-                  }}
-                >⋯</button>
+                {sortMode ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
+                    <button
+                      onClick={() => moveRoutine(index, -1)}
+                      disabled={index === 0}
+                      style={{
+                        width: 30, height: 30, borderRadius: 8, border: 'none',
+                        background: index === 0 ? '#E8EEF5' : C.primary + '20',
+                        color: index === 0 ? '#CCC' : C.primary,
+                        cursor: index === 0 ? 'default' : 'pointer',
+                        fontSize: 12, fontWeight: 800,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >{String.fromCharCode(9650)}</button>
+                    <button
+                      onClick={() => moveRoutine(index, 1)}
+                      disabled={index === routines.length - 1}
+                      style={{
+                        width: 30, height: 30, borderRadius: 8, border: 'none',
+                        background: index === routines.length - 1 ? '#E8EEF5' : C.primary + '20',
+                        color: index === routines.length - 1 ? '#CCC' : C.primary,
+                        cursor: index === routines.length - 1 ? 'default' : 'pointer',
+                        fontSize: 12, fontWeight: 800,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >{String.fromCharCode(9660)}</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={e => { e.stopPropagation(); openEdit(routine) }}
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                      background: '#E8EEF5', border: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 16, color: C.gray,
+                    }}
+                  >{String.fromCharCode(8943)}</button>
+                )}
               </div>
 
               {/* Steps */}
-              {expanded && (
+              {expanded && !sortMode && (
                 <div style={{ borderTop: `1px solid #F3F0EB`, padding: '8px 0 12px' }}>
                   {rs.map(step => {
                     const done = logs[step.id]?.done || false
@@ -446,8 +485,8 @@ export default function RoutinesTab() {
                       }}>
                         <div style={{
                           width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                          border: `2px solid ${done ? tagColor : C.border}`,
-                          background: done ? tagColor : 'transparent',
+                          border: `2px solid ${done ? C.primary : C.border}`,
+                          background: done ? C.primary : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, color: 'white', fontWeight: 700, transition: 'all 0.2s',
                         }}>
@@ -494,28 +533,12 @@ export default function RoutinesTab() {
       {showAdd && (
         <Card style={{ marginBottom: 8 }}>
           <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Neue Routine</div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <input value={newEmoji} onChange={e => setNewEmoji(e.target.value)}
               style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#F4F8FD' }} />
             <input value={newName} onChange={e => setNewName(e.target.value)}
               placeholder="Name der Routine" autoFocus
               style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 14, background: '#F4F8FD' }} />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: C.gray, marginBottom: 4, fontWeight: 600 }}>Uhrzeit</div>
-              <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14 }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: C.gray, marginBottom: 4, fontWeight: 600 }}>Tageszeit</div>
-              <select value={newTag} onChange={e => setNewTag(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.white }}>
-                <option value="morgen">Morgen</option>
-                <option value="nachmittag">Nachmittag</option>
-                <option value="abend">Abend</option>
-              </select>
-            </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: 11, background: '#E8EEF5', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer', fontWeight: 600, color: C.gray }}>
@@ -557,7 +580,7 @@ export default function RoutinesTab() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
-                      <div style={{ fontSize: 12, color: C.gray }}>⏰ {t.time} • {dur} Min. • {t.steps.length} Schritte</div>
+                      <div style={{ fontSize: 12, color: C.gray }}>{dur} Min. • {t.steps.length} Schritte</div>
                     </div>
                     <div style={{ fontSize: 18, color: C.primary }}>+</div>
                   </div>
@@ -584,7 +607,7 @@ export default function RoutinesTab() {
             <div style={{ fontWeight: 900, fontSize: 17, marginBottom: 16 }}>Routine bearbeiten</div>
 
             {/* Name & Emoji */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               <input value={editEmoji} onChange={e => setEditEmoji(e.target.value)}
                 style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#F4F8FD' }} />
               <input value={editName} onChange={e => setEditName(e.target.value)}
@@ -592,23 +615,6 @@ export default function RoutinesTab() {
                 style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#F4F8FD' }} />
             </div>
 
-            {/* Time & Tag */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: C.gray, marginBottom: 4, fontWeight: 600 }}>Uhrzeit</div>
-                <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14 }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: C.gray, marginBottom: 4, fontWeight: 600 }}>Tageszeit</div>
-                <select value={editTag} onChange={e => setEditTag(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.white }}>
-                  <option value="morgen">Morgen</option>
-                  <option value="nachmittag">Nachmittag</option>
-                  <option value="abend">Abend</option>
-                </select>
-              </div>
-            </div>
 
             {/* Steps */}
             <div style={{ fontSize: 13, fontWeight: 800, color: '#444', marginBottom: 10 }}>

@@ -158,10 +158,12 @@ export default function HabitsTab() {
     if (!newName.trim()) return
     const { data, error } = await supabase
       .from('habits')
-      .insert({ name: newName.trim(), emoji: newEmoji, target: newTarget, streak: 0, color: C.primary, position: habits.length + 1 })
+      .insert({ name: newName.trim(), emoji: newEmoji, target: newTarget, streak: 0, color: C.primary })
       .select().single()
-    if (error) return
-    setHabits(h => [...h, data])
+    if (error) { console.error('Habit hinzufügen fehlgeschlagen:', error); return }
+    const pos = habits.length + 1
+    await supabase.from('habits').update({ position: pos }).eq('id', data.id)
+    setHabits(h => [...h, { ...data, position: pos }])
     const { data: nl } = await supabase
       .from('habit_logs').insert({ habit_id: data.id, datum: TODAY, done: 0 }).select().single()
     if (nl) setLogs(l => ({ ...l, [data.id]: { done: 0, id: nl.id } }))
