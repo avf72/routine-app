@@ -10,105 +10,6 @@ const C = {
 }
 const TODAY = today()
 
-const ROUTINE_TEMPLATES = [
-  {
-    name: 'Morning Success', emoji: '🌟', time: '06:00', tag: 'morgen',
-    steps: [
-      { name: 'Sofort aufstehen (kein Snooze)', duration: 1 },
-      { name: 'Kalt duschen', duration: 5 },
-      { name: 'Meditation', duration: 10 },
-      { name: 'Tagebuch & Ziele', duration: 10 },
-      { name: 'Sport', duration: 30 },
-      { name: 'Gesundes Frühstück', duration: 15 },
-      { name: 'Wichtigste Aufgabe starten', duration: 60 },
-    ]
-  },
-  {
-    name: 'Clean Girl Morning', emoji: '✨', time: '07:00', tag: 'morgen',
-    steps: [
-      { name: 'Warmes Wasser mit Zitrone', duration: 5 },
-      { name: 'Yoga / Stretching', duration: 20 },
-      { name: 'Hautpflege-Routine', duration: 10 },
-      { name: 'Gesundes Frühstück zubereiten', duration: 15 },
-      { name: 'Tagesplan in Notizbuch', duration: 10 },
-    ]
-  },
-  {
-    name: 'Productive Morning', emoji: '🚀', time: '06:30', tag: 'morgen',
-    steps: [
-      { name: 'E-Mails NICHT checken', duration: 1 },
-      { name: 'Tages-Prioritäten setzen', duration: 10 },
-      { name: 'MIT (Most Important Task)', duration: 90 },
-      { name: 'Kurzpause & Snack', duration: 10 },
-      { name: 'Zweite Priorität bearbeiten', duration: 60 },
-    ]
-  },
-  {
-    name: 'Wind Down', emoji: '🍃', time: '20:00', tag: 'abend',
-    steps: [
-      { name: 'Blaulicht-Filter aktivieren', duration: 2 },
-      { name: 'Leichtes Abendessen', duration: 20 },
-      { name: 'Spaziergang oder Yoga', duration: 20 },
-      { name: 'Buch lesen', duration: 30 },
-      { name: 'Meditation / Atemübung', duration: 10 },
-      { name: 'Schlaf-Routine', duration: 10 },
-    ]
-  },
-  {
-    name: 'Evening Review', emoji: '📊', time: '21:00', tag: 'abend',
-    steps: [
-      { name: 'Tagesreview: Was lief gut?', duration: 5 },
-      { name: 'Morgige Aufgaben planen', duration: 10 },
-      { name: '3 Dankbarkeiten aufschreiben', duration: 5 },
-      { name: 'Lerneinheit (Buch/Kurs)', duration: 30 },
-      { name: 'Handy weglegen', duration: 1 },
-    ]
-  },
-  {
-    name: 'Deep Work', emoji: '🎯', time: '09:00', tag: 'nachmittag',
-    steps: [
-      { name: 'Alle Ablenkungen beseitigen', duration: 5 },
-      { name: 'Ziel für Session definieren', duration: 5 },
-      { name: 'Pomodoro Block 1', duration: 25 },
-      { name: 'Pause', duration: 5 },
-      { name: 'Pomodoro Block 2', duration: 25 },
-      { name: 'Pause', duration: 5 },
-      { name: 'Pomodoro Block 3', duration: 25 },
-      { name: 'Ergebnisse dokumentieren', duration: 10 },
-    ]
-  },
-  {
-    name: 'Student Schedule', emoji: '📖', time: '08:00', tag: 'morgen',
-    steps: [
-      { name: 'Lernstoff des Vortags wiederholen', duration: 15 },
-      { name: 'Neuen Stoff erarbeiten', duration: 45 },
-      { name: 'Zusammenfassung erstellen', duration: 15 },
-      { name: 'Aufgaben lösen', duration: 30 },
-      { name: 'Flashcards aktualisieren', duration: 10 },
-    ]
-  },
-  {
-    name: 'Self-Care Sunday', emoji: '🛁', time: '10:00', tag: 'morgen',
-    steps: [
-      { name: 'Ausschlafen ohne Alarm', duration: 0 },
-      { name: 'Langsames Frühstück geniessen', duration: 30 },
-      { name: 'Bad / Spa-Routine', duration: 45 },
-      { name: 'Spaziergang in der Natur', duration: 40 },
-      { name: 'Lieblings-Essen kochen', duration: 30 },
-      { name: 'Film / Serie / Buch', duration: 90 },
-    ]
-  },
-  {
-    name: 'Digital Detox', emoji: '📵', time: '07:00', tag: 'morgen',
-    steps: [
-      { name: 'Handy in anderen Raum legen', duration: 1 },
-      { name: 'Morgengymnastik', duration: 15 },
-      { name: 'Frühstück ohne Screen', duration: 20 },
-      { name: 'Offline-Hobby (Lesen/Zeichnen)', duration: 60 },
-      { name: 'Natur-Spaziergang', duration: 30 },
-    ]
-  },
-]
 
 
 export default function RoutinesTab() {
@@ -117,7 +18,6 @@ export default function RoutinesTab() {
   const [logs, setLogs] = useState({})
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
-  const [showTemplate, setShowTemplate] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [showSaved, setShowSaved] = useState(false)
   const [newName, setNewName] = useState('')
@@ -176,27 +76,6 @@ export default function RoutinesTab() {
     }
   }
 
-  async function addFromTemplate(tmpl) {
-    const { steps: tmplSteps, ...routineData } = tmpl
-    const pos = routines.length + 1
-    let nr
-    const { data: d1, error: e1 } = await supabase.from('routines').insert({ ...routineData, position: pos }).select().single()
-    if (e1) {
-      const { data: d2, error: e2 } = await supabase.from('routines').insert(routineData).select().single()
-      if (e2) return
-      nr = d2
-    } else {
-      nr = { ...d1, position: pos }
-    }
-    if (tmplSteps) {
-      const sd = tmplSteps.map((s, i) => ({ ...s, routine_id: nr.id, position: i + 1 }))
-      const { data: ns } = await supabase.from('routine_steps').insert(sd).select()
-      setSteps(prev => [...prev, ...(ns || [])])
-    }
-    setRoutines(prev => [...prev, nr])
-    setShowTemplate(false)
-    flashSaved()
-  }
 
   async function addRoutine() {
     if (!newName.trim()) return
@@ -512,11 +391,7 @@ export default function RoutinesTab() {
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <button onClick={() => setShowTemplate(true)} style={{
-          flex: 1, padding: '13px', background: `${C.primary}12`,
-          border: `2px dashed ${C.primary}50`, borderRadius: 14,
-          color: C.primary, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-        }}>📋 Vorlage wählen</button>
+
         <button onClick={() => setShowAdd(!showAdd)} style={{
           flex: 1, padding: '13px', background: `${C.primary}12`,
           border: `2px dashed ${C.primary}50`, borderRadius: 14,
