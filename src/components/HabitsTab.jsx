@@ -194,7 +194,9 @@ export default function HabitsTab() {
   }
 
   const doneCount = habits.filter(h => (logs[h.id]?.done || 0) >= h.target).length
-  const progress = habits.length > 0 ? (doneCount / habits.length) * 100 : 0
+  const progress = habits.length > 0
+    ? (habits.reduce((sum, h) => sum + Math.min((logs[h.id]?.done || 0) / h.target, 1), 0) / habits.length) * 100
+    : 0
 
   function greeting() {
     if (progress === 100) return '🎉 Alles geschafft! Du bist grossartig!'
@@ -222,7 +224,7 @@ export default function HabitsTab() {
         boxShadow: '0 4px 20px rgba(30,111,191,0.3)',
       }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginBottom: 4 }}>Meine Gewohnheiten</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginBottom: 4 }}>Meine Trainings</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }}>{greeting()}</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
             {doneCount} / {habits.length} diese Woche erledigt

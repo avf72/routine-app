@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import { supabase, today, yesterday } from './lib/supabase'
 import HabitsTab from './components/HabitsTab'
 import RoutinesTab from './components/RoutinesTab'
+import TechnikTab from './components/TechnikTab'
 import TasksTab from './components/TasksTab'
-import ChallengesTab from './components/ChallengesTab'
 
 const TABS = [
-  { id: 'habits', icon: '🏆', label: 'Trainingswoche' },
   { id: 'routines', icon: '🔄', label: 'Routinen' },
+  { id: 'habits', icon: '🏆', label: 'Trainingswoche' },
+  { id: 'technik', icon: '⚙️', label: 'Technik' },
   { id: 'tasks', icon: '✅', label: 'Aufgaben' },
-  { id: 'challenges', icon: '🎯', label: 'Challenges' },
 ]
 
 const SEED_HABITS = [
@@ -144,7 +144,7 @@ async function autoRolloverTasks() {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('habits')
+  const [activeTab, setActiveTab] = useState('routines')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -227,10 +227,10 @@ export default function App() {
 
       {/* Tab Content */}
       <div style={{ paddingBottom: 80 }}>
-        {activeTab === 'habits' && <HabitsTab />}
         {activeTab === 'routines' && <RoutinesTab />}
+        {activeTab === 'habits' && <HabitsTab />}
+        {activeTab === 'technik' && <TechnikTab />}
         {activeTab === 'tasks' && <TasksTab />}
-        {activeTab === 'challenges' && <ChallengesTab />}
       </div>
 
       {/* Bottom Navigation */}
