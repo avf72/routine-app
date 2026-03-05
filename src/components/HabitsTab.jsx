@@ -36,6 +36,11 @@ export default function HabitsTab() {
   const [newEmoji, setNewEmoji] = useState('⭐')
   const [newTarget, setNewTarget] = useState(1)
   const [showSaved, setShowSaved] = useState(false)
+  const [editingHabit, setEditingHabit] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editEmoji, setEditEmoji] = useState('⭐')
+  const [editTarget, setEditTarget] = useState(1)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const weekDates = getWeekDates()
 
   const loadData = useCallback(async () => {
@@ -53,7 +58,6 @@ export default function HabitsTab() {
       const logsMap = {}
       for (const l of todayLogs) logsMap[l.habit_id] = { done: l.done, id: l.id }
 
-      // Create missing today logs
       if (habitsData) {
         for (const h of habitsData) {
           if (!logsMap[h.id]) {
@@ -64,7 +68,6 @@ export default function HabitsTab() {
         }
       }
 
-      // Week overview map
       const wMap = {}
       for (const d of weekDates) {
         const dayLogs = (allLogs || []).filter(l => l.datum === d)
@@ -98,17 +101,10 @@ export default function HabitsTab() {
     } else {
       next = prev < habit.target ? prev + 1 : 0
     }
-
-    // Optimistic update
     setLogs(l => ({ ...l, [habit.id]: { ...l[habit.id], done: next } }))
-
     const { error } = await supabase.from('habit_logs').update({ done: next }).eq('id', log.id)
-    if (error) {
-      setLogs(l => ({ ...l, [habit.id]: { ...l[habit.id], done: prev } }))
-      return
-    }
+    if (error) { setLogs(l => ({ ...l, [habit.id]: { ...l[habit.id], done: prev } })); return }
 
-    // Streak management
     const wasComplete = prev >= habit.target
     const isComplete = next >= habit.target
     if (!wasComplete && isComplete) {
@@ -120,7 +116,6 @@ export default function HabitsTab() {
       await supabase.from('habits').update({ streak: ns }).eq('id', habit.id)
       setHabits(h => h.map(hh => hh.id === habit.id ? { ...hh, streak: ns } : hh))
     }
-
     flashSaved()
   }
 
@@ -137,6 +132,41 @@ export default function HabitsTab() {
     if (nl) setLogs(l => ({ ...l, [data.id]: { done: 0, id: nl.id } }))
     setNewName(''); setNewEmoji('⭐'); setNewTarget(1); setShowAdd(false)
     flashSaved()
+  }
+
+  function openEdit(habit) {
+    setEditingHabit(habit)
+    setEditName(habit.name)
+    setEditEmoji(habit.emoji)
+    setEditTarget(habit.target)
+    setConfirmDelete(false)
+  }
+
+  function closeEdit() {
+    setEditingHabit(null)
+    setConfirmDelete(false)
+  }
+
+  async function saveEdit() {
+    if (!editName.trim() || !editingHabit) return
+    const updates = { name: editName.trim(), emoji: editEmoji, target: editTarget }
+    const { error } = await supabase.from('habits').update(updates).eq('id', editingHabit.id)
+    if (!error) {
+      setHabits(h => h.map(hh => hh.id === editingHabit.id ? { ...hh, ...updates } : hh))
+      closeEdit()
+      flashSaved()
+    }
+  }
+
+  async function deleteHabit() {
+    if (!editingHabit) return
+    const { error } = await supabase.from('habits').delete().eq('id', editingHabit.id)
+    if (!error) {
+      setHabits(h => h.filter(hh => hh.id !== editingHabit.id))
+      setLogs(l => { const nl = { ...l }; delete nl[editingHabit.id]; return nl })
+      closeEdit()
+      flashSaved()
+    }
   }
 
   function flashSaved() {
@@ -195,25 +225,17 @@ export default function HabitsTab() {
             const wl = weekLogs[d]
             const isDone = !isFuture && wl && wl.total > 0 && wl.done === wl.total
             const isPartial = !isFuture && wl && wl.done > 0 && wl.done < wl.total
-
-            let bg = '#F3F4F6'
-            let textColor = C.gray
+            let bg = '#F3F4F6', textColor = C.gray
             if (isDone) { bg = C.primary; textColor = 'white' }
             else if (isPartial) { bg = `${C.primary}55`; textColor = C.primary }
             else if (isToday) { bg = `${C.primary}18`; textColor = C.primary }
-
             return (
               <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 500, color: isToday ? C.primary : C.gray }}>
-                  {label}
-                </div>
+                <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 500, color: isToday ? C.primary : C.gray }}>{label}</div>
                 <div style={{
-                  width: 30, height: 30, borderRadius: '50%',
-                  background: bg, color: textColor,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 700,
-                  border: isToday ? `2px solid ${C.primary}` : '2px solid transparent',
-                  transition: 'all 0.2s',
+                  width: 30, height: 30, borderRadius: '50%', background: bg, color: textColor,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
+                  border: isToday ? `2px solid ${C.primary}` : '2px solid transparent', transition: 'all 0.2s',
                 }}>
                   {isDone ? '✓' : isPartial ? wl.done : ''}
                 </div>
@@ -230,7 +252,6 @@ export default function HabitsTab() {
           const completed = done >= habit.target
           const pct = habit.target > 1 ? Math.min(done / habit.target, 1) : 0
           const col = habit.color || C.primary
-
           return (
             <div
               key={habit.id}
@@ -294,6 +315,19 @@ export default function HabitsTab() {
               }}>
                 {completed ? '✓' : habit.target > 1 ? done : ''}
               </div>
+
+              {/* Edit Button */}
+              <button
+                onClick={e => { e.stopPropagation(); openEdit(habit) }}
+                style={{
+                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                  background: '#F3F0EB', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, color: C.gray, transition: 'background 0.2s',
+                }}
+              >
+                ⋯
+              </button>
             </div>
           )
         })}
@@ -304,39 +338,25 @@ export default function HabitsTab() {
         <Card style={{ marginBottom: 14 }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: '#333', marginBottom: 14 }}>Neuen Habit hinzufügen</div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <div style={{ position: 'relative' }}>
-              <input
-                value={newEmoji}
-                onChange={e => setNewEmoji(e.target.value)}
-                style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#FDF6EE' }}
-              />
-            </div>
-            <input
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              placeholder="Name des Habits"
-              autoFocus
-              style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#FDF6EE' }}
-            />
+            <input value={newEmoji} onChange={e => setNewEmoji(e.target.value)}
+              style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#FDF6EE' }} />
+            <input value={newName} onChange={e => setNewName(e.target.value)}
+              placeholder="Name des Habits" autoFocus
+              style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#FDF6EE' }} />
           </div>
-          {/* Emoji Picker */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
             {EMOJI_OPTIONS.map(em => (
               <button key={em} onClick={() => setNewEmoji(em)} style={{
                 width: 36, height: 36, borderRadius: 10, border: `2px solid ${newEmoji === em ? C.primary : C.border}`,
                 background: newEmoji === em ? `${C.primary}15` : C.white, fontSize: 18, cursor: 'pointer',
-              }}>
-                {em}
-              </button>
+              }}>{em}</button>
             ))}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <span style={{ fontSize: 14, color: C.gray, fontWeight: 600 }}>Tagesziel:</span>
-            <input
-              type="number" min={1} max={20} value={newTarget}
+            <input type="number" min={1} max={20} value={newTarget}
               onChange={e => setNewTarget(Math.max(1, parseInt(e.target.value) || 1))}
-              style={{ width: 64, padding: '8px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 15, textAlign: 'center' }}
-            />
+              style={{ width: 64, padding: '8px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 15, textAlign: 'center' }} />
             <span style={{ fontSize: 14, color: C.gray }}>× pro Tag</span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -349,17 +369,99 @@ export default function HabitsTab() {
           </div>
         </Card>
       ) : (
-        <button
-          onClick={() => setShowAdd(true)}
-          style={{
-            width: '100%', padding: '14px', marginBottom: 8,
-            background: `${C.primary}12`, border: `2px dashed ${C.primary}50`,
-            borderRadius: 16, color: C.primary, fontSize: 15, fontWeight: 700,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-        >
+        <button onClick={() => setShowAdd(true)} style={{
+          width: '100%', padding: '14px', marginBottom: 8,
+          background: `${C.primary}12`, border: `2px dashed ${C.primary}50`,
+          borderRadius: 16, color: C.primary, fontSize: 15, fontWeight: 700,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
           + Neuen Habit hinzufügen
         </button>
+      )}
+
+      {/* Edit Modal */}
+      {editingHabit && (
+        <div onClick={closeEdit} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500,
+          display: 'flex', alignItems: 'flex-end',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: '100%', maxWidth: 430, margin: '0 auto',
+            background: C.white, borderRadius: '24px 24px 0 0',
+            padding: '20px 20px 36px', animation: 'slideUp 0.3s ease',
+          }}>
+            {/* Handle */}
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0D8D0', margin: '0 auto 20px' }} />
+
+            <div style={{ fontWeight: 900, fontSize: 17, marginBottom: 16 }}>Habit bearbeiten</div>
+
+            {/* Name & Emoji */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <input value={editEmoji} onChange={e => setEditEmoji(e.target.value)}
+                style={{ width: 52, height: 44, textAlign: 'center', fontSize: 22, border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#FDF6EE' }} />
+              <input value={editName} onChange={e => setEditName(e.target.value)}
+                placeholder="Name des Habits" autoFocus
+                style={{ flex: 1, padding: '10px 14px', border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 15, background: '#FDF6EE' }} />
+            </div>
+
+            {/* Emoji Picker */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {EMOJI_OPTIONS.map(em => (
+                <button key={em} onClick={() => setEditEmoji(em)} style={{
+                  width: 36, height: 36, borderRadius: 10, border: `2px solid ${editEmoji === em ? C.primary : C.border}`,
+                  background: editEmoji === em ? `${C.primary}15` : C.white, fontSize: 18, cursor: 'pointer',
+                }}>{em}</button>
+              ))}
+            </div>
+
+            {/* Target */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <span style={{ fontSize: 14, color: C.gray, fontWeight: 600 }}>Tagesziel:</span>
+              <input type="number" min={1} max={20} value={editTarget}
+                onChange={e => setEditTarget(Math.max(1, parseInt(e.target.value) || 1))}
+                style={{ width: 64, padding: '8px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 15, textAlign: 'center' }} />
+              <span style={{ fontSize: 14, color: C.gray }}>× pro Tag</span>
+            </div>
+
+            {/* Save */}
+            <button onClick={saveEdit} style={{
+              width: '100%', padding: 14, background: C.primary, border: 'none',
+              borderRadius: 14, color: 'white', fontWeight: 800, fontSize: 15, cursor: 'pointer', marginBottom: 10,
+            }}>
+              Änderungen speichern
+            </button>
+
+            {/* Delete */}
+            {!confirmDelete ? (
+              <button onClick={() => setConfirmDelete(true)} style={{
+                width: '100%', padding: 12, background: '#FFF0F0', border: `1.5px solid ${C.rose}30`,
+                borderRadius: 14, color: C.rose, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              }}>
+                🗑 Habit löschen
+              </button>
+            ) : (
+              <div style={{ background: '#FFF0F0', borderRadius: 14, padding: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.rose, marginBottom: 10, textAlign: 'center' }}>
+                  Wirklich löschen? Alle Einträge gehen verloren.
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setConfirmDelete(false)} style={{
+                    flex: 1, padding: 10, background: '#F3F0EB', border: 'none',
+                    borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', color: C.gray,
+                  }}>
+                    Abbrechen
+                  </button>
+                  <button onClick={deleteHabit} style={{
+                    flex: 1, padding: 10, background: C.rose, border: 'none',
+                    borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', color: 'white',
+                  }}>
+                    Ja, löschen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
