@@ -411,13 +411,8 @@ export default function RoutinesTab() {
                     {routine.emoji}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                      <div style={{ fontWeight: 800, fontSize: 15, color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {routine.name}
-                      </div>
-                      <div style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', background: `${tagColor}18`, color: tagColor, borderRadius: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        Täglich
-                      </div>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
+                      {routine.name}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.gray, marginBottom: rs.length > 0 ? 6 : 0 }}>
                       {duration > 0 && <span>{duration} Min.</span>}
@@ -568,7 +563,7 @@ export default function RoutinesTab() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {ROUTINE_TEMPLATES.map(t => {
-                const tc = tagColors[t.tag] || C.primary
+                const tc = C.primary
                 const dur = t.steps.reduce((sum, s) => sum + s.duration, 0)
                 return (
                   <div key={t.name} onClick={() => addFromTemplate(t)} style={{
