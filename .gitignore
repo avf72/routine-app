@@ -7,6 +7,9 @@ dist-ssr/
 
 # Environment
 .env
+
+# Lokale Notizen (nicht oeffentlich)
+ZUGANGSDATEN.md
 .env.local
 .env.*.local
 
