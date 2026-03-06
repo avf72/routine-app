@@ -15,6 +15,24 @@ const TODAY = today()
 
 const EMOJI_OPTIONS = ['⭐', '🏃', '💧', '📚', '🧘', '💪', '🍎', '😴', '🎯', '✍️', '🎸', '🌿', '🧹', '☕', '🚶', '🎨', '🙏', '📝']
 
+const WEEK_DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+
+function getWeekInfo() {
+  const now = new Date()
+  const dow = now.getDay() // 0=So, 1=Mo, …, 6=Sa
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const monday = new Date(now)
+  monday.setDate(now.getDate() + mondayOffset)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  const weekDayIndex = dow === 0 ? 6 : dow - 1 // 0=Mo … 6=So
+  const fmt = d => `${d.getDate()}.${d.getMonth() + 1}.`
+  const rangeLabel = `${fmt(monday)} – ${fmt(sunday)}${sunday.getFullYear()}`
+  return { weekDayIndex, rangeLabel }
+}
+
+const { weekDayIndex, rangeLabel } = getWeekInfo()
+
 export default function HabitsTab() {
   const [habits, setHabits] = useState([])
   const [logs, setLogs] = useState({})
@@ -219,18 +237,56 @@ export default function HabitsTab() {
       {/* Hero */}
       <div style={{
         background: `linear-gradient(135deg, ${C.primary} 0%, ${C.sage} 100%)`,
-        borderRadius: 20, padding: '20px 20px', marginBottom: 14,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        borderRadius: 20, padding: '18px 20px 16px', marginBottom: 14,
         boxShadow: '0 4px 20px rgba(30,111,191,0.3)',
       }}>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginBottom: 4 }}>Meine Trainings</div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }}>{greeting()}</div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
-            {doneCount} / {habits.length} diese Woche erledigt
+        {/* Top row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'white', marginBottom: 1 }}>Trainingswoche</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginBottom: 4 }}>{rangeLabel}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }}>{greeting()}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+              {doneCount} / {habits.length} heute erledigt
+            </div>
           </div>
+          <Ring percent={progress} size={74} color="white" trackColor="rgba(255,255,255,0.25)" />
         </div>
-        <Ring percent={progress} size={74} color="white" trackColor="rgba(255,255,255,0.25)" />
+
+        {/* Week progress */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          {WEEK_DAYS.map((day, i) => {
+            const isPast = i < weekDayIndex
+            const isToday = i === weekDayIndex
+            return (
+              <div key={day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: isPast ? 'rgba(255,255,255,0.85)' : isToday ? 'white' : 'rgba(255,255,255,0.18)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 800,
+                  color: isPast || isToday ? C.primary : 'rgba(255,255,255,0.5)',
+                  boxShadow: isToday ? '0 0 0 2.5px rgba(255,255,255,0.5)' : 'none',
+                }}>
+                  {isPast ? '✓' : day.charAt(0)}
+                </div>
+                <span style={{
+                  fontSize: 9, fontWeight: isToday ? 800 : 500,
+                  color: isToday ? 'white' : 'rgba(255,255,255,0.55)',
+                }}>{day}</span>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2 }}>
+          <div style={{
+            height: '100%',
+            width: `${((weekDayIndex + 1) / 7) * 100}%`,
+            background: 'white',
+            borderRadius: 2,
+            transition: 'width 0.5s ease',
+          }} />
+        </div>
       </div>
 
 
