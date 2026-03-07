@@ -90,10 +90,7 @@ export async function handleCallback() {
       localStorage.removeItem('gc_pkce_verifier')
       return { tab: 'tasks' }
     }
-    localStorage.setItem('gc_debug_error', JSON.stringify({ error: data, redirect_uri: getRedirectUri() }))
-  } catch (e) {
-    localStorage.setItem('gc_debug_error', JSON.stringify({ exception: e.message }))
-  }
+  } catch (e) { /* ignore */ }
   return null
 }
 
