@@ -57,10 +57,10 @@ export default function TasksTab() {
 
   // Switch to Termine section automatically after Google OAuth redirect
   useEffect(() => {
-    const section = sessionStorage.getItem('gc_post_auth_section')
+    const section = localStorage.getItem('gc_post_auth_section')
     if (section) {
       setActiveSection(section)
-      sessionStorage.removeItem('gc_post_auth_section')
+      localStorage.removeItem('gc_post_auth_section')
     }
   }, [])
 

@@ -25,14 +25,14 @@ async function pkceChallenge(verifier) {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export function isAuthenticated() {
-  return !!(localStorage.getItem('gc_access_token') && localStorage.getItem('gc_refresh_token'))
+  return !!localStorage.getItem('gc_access_token')
 }
 
 export async function startAuth() {
   const verifier = randomString(64)
   const challenge = await pkceChallenge(verifier)
-  sessionStorage.setItem('gc_pkce_verifier', verifier)
-  sessionStorage.setItem('gc_post_auth_section', 'termine')
+  localStorage.setItem('gc_pkce_verifier', verifier)
+  localStorage.setItem('gc_post_auth_section', 'termine')
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -59,7 +59,7 @@ export async function handleCallback() {
 
   window.history.replaceState({}, '', window.location.pathname)
 
-  const verifier = sessionStorage.getItem('gc_pkce_verifier')
+  const verifier = localStorage.getItem('gc_pkce_verifier')
   if (!verifier) return null
 
   try {
@@ -79,9 +79,10 @@ export async function handleCallback() {
       localStorage.setItem('gc_access_token', data.access_token)
       localStorage.setItem('gc_token_expiry', String(Date.now() + data.expires_in * 1000))
       if (data.refresh_token) localStorage.setItem('gc_refresh_token', data.refresh_token)
-      sessionStorage.removeItem('gc_pkce_verifier')
+      localStorage.removeItem('gc_pkce_verifier')
       return { tab: 'tasks' }
     }
+    console.error('Token exchange failed:', data)
   } catch (e) {
     console.error('OAuth token exchange failed:', e)
   }
