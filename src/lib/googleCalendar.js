@@ -97,9 +97,8 @@ export async function handleCallback() {
       if (data.refresh_token) localStorage.setItem('gc_refresh_token', data.refresh_token)
       localStorage.removeItem('gc_pkce_verifier')
 
-      // Im Popup: Hauptfenster benachrichtigen und Popup schliessen
+      // Im Popup: Popup schliessen (storage-Event informiert Hauptfenster)
       if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({ type: 'gc_auth_done' }, getRedirectUri())
         window.close()
         return null
       }

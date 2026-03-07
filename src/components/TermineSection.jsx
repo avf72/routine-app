@@ -99,14 +99,13 @@ export default function TermineSection() {
     if (authed) loadEvents()
   }, [authed, loadEvents])
 
-  // Popup-Signal empfangen: OAuth im Popup abgeschlossen
+  // localStorage-Änderung empfangen: OAuth im Popup abgeschlossen
   useEffect(() => {
-    function onMessage(e) {
-      if (e.origin !== window.location.origin) return
-      if (e.data?.type === 'gc_auth_done') setAuthed(true)
+    function onStorage(e) {
+      if (e.key === 'gc_access_token' && e.newValue) setAuthed(true)
     }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
   }, [])
 
   async function handleSync() {
