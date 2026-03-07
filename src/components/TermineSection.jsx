@@ -99,6 +99,16 @@ export default function TermineSection() {
     if (authed) loadEvents()
   }, [authed, loadEvents])
 
+  // Popup-Signal empfangen: OAuth im Popup abgeschlossen
+  useEffect(() => {
+    function onMessage(e) {
+      if (e.origin !== window.location.origin) return
+      if (e.data?.type === 'gc_auth_done') setAuthed(true)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
   async function handleSync() {
     setSyncing(true)
     setError(null)
@@ -193,12 +203,6 @@ export default function TermineSection() {
   // ── Not authenticated ─────────────────────────────────────────────────────
 
   if (!authed) {
-    const dbg = {
-      access_token: !!localStorage.getItem('gc_access_token'),
-      refresh_token: !!localStorage.getItem('gc_refresh_token'),
-      verifier: !!localStorage.getItem('gc_pkce_verifier'),
-      url_code: !!new URLSearchParams(window.location.search).get('code'),
-    }
     return (
       <div style={{ padding: '40px 8px', textAlign: 'center' }}>
         <div style={{ fontSize: 52, marginBottom: 16 }}>📅</div>
@@ -219,15 +223,6 @@ export default function TermineSection() {
         >
           Mit Google verbinden
         </button>
-        <div style={{ marginTop: 24, fontSize: 11, color: '#aaa', fontFamily: 'monospace', textAlign: 'left', background: '#f5f5f5', borderRadius: 8, padding: 10 }}>
-          <div>access_token: {String(dbg.access_token)}</div>
-          <div>refresh_token: {String(dbg.refresh_token)}</div>
-          <div>pkce_verifier: {String(dbg.verifier)}</div>
-          <div>url ?code: {String(dbg.url_code)}</div>
-          <div style={{ marginTop: 6, color: '#c00', wordBreak: 'break-all' }}>
-            error: {localStorage.getItem('gc_debug_error') || 'none'}
-          </div>
-        </div>
       </div>
     )
   }

@@ -29,10 +29,16 @@ export function isAuthenticated() {
 }
 
 export async function startAuth() {
+  // Popup synchron öffnen (vor await, sonst blockiert iOS Safari)
+  const popup = window.open('', 'gc_oauth', 'width=520,height=650,left=150,top=80')
+  if (!popup) {
+    alert('Bitte erlaube Popups für diese Seite und versuche es erneut.')
+    return
+  }
+
   const verifier = randomString(64)
   const challenge = await pkceChallenge(verifier)
   localStorage.setItem('gc_pkce_verifier', verifier)
-  localStorage.setItem('gc_post_auth_section', 'termine')
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -44,23 +50,31 @@ export async function startAuth() {
     access_type: 'offline',
     prompt: 'consent',
   })
-  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
+
+  popup.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
 }
+
+export function logout() {
+  localStorage.removeItem('gc_access_token')
+  localStorage.removeItem('gc_refresh_token')
+  localStorage.removeItem('gc_token_expiry')
+}
+
+// ── OAuth Callback (läuft im Popup) ──────────────────────────────────────────
 
 export async function handleCallback() {
   const params = new URLSearchParams(window.location.search)
   const error = params.get('error')
   const code = params.get('code')
 
-  if (error || !code) {
-    if (error) window.history.replaceState({}, '', window.location.pathname)
+  if (error) {
+    window.history.replaceState({}, '', window.location.pathname)
     return null
   }
+  if (!code) return null
 
   const verifier = localStorage.getItem('gc_pkce_verifier')
-
   window.history.replaceState({}, '', window.location.pathname)
-
   if (!verifier) return null
 
   try {
@@ -76,12 +90,20 @@ export async function handleCallback() {
       }),
     })
     const data = await res.json()
+
     if (data.access_token) {
       localStorage.setItem('gc_access_token', data.access_token)
       localStorage.setItem('gc_token_expiry', String(Date.now() + data.expires_in * 1000))
       if (data.refresh_token) localStorage.setItem('gc_refresh_token', data.refresh_token)
       localStorage.removeItem('gc_pkce_verifier')
-      localStorage.removeItem('gc_debug_error')
+
+      // Im Popup: Hauptfenster benachrichtigen und Popup schliessen
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: 'gc_auth_done' }, getRedirectUri())
+        window.close()
+        return null
+      }
+
       return { tab: 'tasks' }
     }
     localStorage.setItem('gc_debug_error', JSON.stringify(data))
@@ -91,11 +113,7 @@ export async function handleCallback() {
   return null
 }
 
-export function logout() {
-  localStorage.removeItem('gc_access_token')
-  localStorage.removeItem('gc_refresh_token')
-  localStorage.removeItem('gc_token_expiry')
-}
+// ── Token Refresh ─────────────────────────────────────────────────────────────
 
 async function refreshToken() {
   const rt = localStorage.getItem('gc_refresh_token')
@@ -200,7 +218,6 @@ export async function createEvent({ title, date, startTime, endTime, description
     if (!res.ok) return null
     return res.json()
   } catch (e) {
-    console.error('createEvent failed:', e)
     return null
   }
 }
@@ -230,7 +247,6 @@ export async function updateEvent(eventId, { title, date, startTime, endTime, de
     if (!res.ok) return null
     return res.json()
   } catch (e) {
-    console.error('updateEvent failed:', e)
     return null
   }
 }
@@ -246,7 +262,6 @@ export async function deleteEvent(eventId) {
     )
     return res.ok || res.status === 204
   } catch (e) {
-    console.error('deleteEvent failed:', e)
     return false
   }
 }
