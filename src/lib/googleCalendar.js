@@ -3,7 +3,7 @@ const CALENDAR_ID = '1gg1v8lqfhls1eeuvsc71hevdo@group.calendar.google.com'
 const SCOPE = 'https://www.googleapis.com/auth/calendar'
 
 function getRedirectUri() {
-  return window.location.origin
+  return import.meta.env.VITE_REDIRECT_URI || window.location.origin
 }
 
 // ── PKCE ─────────────────────────────────────────────────────────────────────
