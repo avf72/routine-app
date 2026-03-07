@@ -38,6 +38,7 @@ export async function startAuth() {
 
   const verifier = randomString(64)
   const challenge = await pkceChallenge(verifier)
+  // Verifier im state-Parameter mitschicken (Avast isoliert localStorage zwischen Fenstern)
   localStorage.setItem('gc_pkce_verifier', verifier)
 
   const params = new URLSearchParams({
@@ -49,6 +50,7 @@ export async function startAuth() {
     code_challenge_method: 'S256',
     access_type: 'offline',
     prompt: 'consent',
+    state: verifier,
   })
 
   popup.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
@@ -73,7 +75,8 @@ export async function handleCallback() {
   }
   if (!code) return null
 
-  const verifier = localStorage.getItem('gc_pkce_verifier')
+  // Verifier zuerst aus state-Parameter lesen (Avast-kompatibel), dann localStorage als Fallback
+  const verifier = params.get('state') || localStorage.getItem('gc_pkce_verifier')
   window.history.replaceState({}, '', window.location.pathname)
   if (!verifier) return null
 
