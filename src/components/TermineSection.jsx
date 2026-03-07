@@ -99,14 +99,19 @@ export default function TermineSection() {
     if (authed) loadEvents()
   }, [authed, loadEvents])
 
-  // localStorage-Änderung empfangen: OAuth im Popup abgeschlossen
+  // Nach Login-Klick: Token in localStorage abwarten (Popup-Flow)
+  const [polling, setPolling] = useState(false)
   useEffect(() => {
-    function onStorage(e) {
-      if (e.key === 'gc_access_token' && e.newValue) setAuthed(true)
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
+    if (!polling) return
+    const interval = setInterval(() => {
+      if (gc.isAuthenticated()) {
+        setAuthed(true)
+        setPolling(false)
+      }
+    }, 500)
+    const timeout = setTimeout(() => { clearInterval(interval); setPolling(false) }, 300_000)
+    return () => { clearInterval(interval); clearTimeout(timeout) }
+  }, [polling])
 
   async function handleSync() {
     setSyncing(true)
@@ -213,7 +218,7 @@ export default function TermineSection() {
           zu erstellen und zu synchronisieren.
         </div>
         <button
-          onClick={() => gc.startAuth()}
+          onClick={() => { gc.startAuth(); setPolling(true) }}
           style={{
             padding: '14px 32px', background: C.primary, border: 'none',
             borderRadius: 14, color: 'white', fontWeight: 800, fontSize: 15,
