@@ -4,10 +4,10 @@ import App from './App.jsx'
 import { handleCallback } from './lib/googleCalendar.js'
 
 // OAuth-Callback sofort verarbeiten, bevor React rendert
-const gcNav = await handleCallback()
-
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App gcNav={gcNav} />
-  </StrictMode>,
-)
+handleCallback().then(gcNav => {
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <App gcNav={gcNav} />
+    </StrictMode>,
+  )
+})
