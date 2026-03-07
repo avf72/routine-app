@@ -71,15 +71,14 @@ export async function handleCallback() {
   if (!verifier) return null
 
   try {
-    const res = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await fetch('/api/token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: CLIENT_ID,
-        redirect_uri: getRedirectUri(),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         grant_type: 'authorization_code',
+        code,
         code_verifier: verifier,
+        redirect_uri: getRedirectUri(),
       }),
     })
     const data = await res.json()
@@ -91,7 +90,7 @@ export async function handleCallback() {
       localStorage.removeItem('gc_pkce_verifier')
       return { tab: 'tasks' }
     }
-    localStorage.setItem('gc_debug_error', JSON.stringify({ error: data, redirect_uri: getRedirectUri(), verifier_len: verifier?.length }))
+    localStorage.setItem('gc_debug_error', JSON.stringify({ error: data, redirect_uri: getRedirectUri() }))
   } catch (e) {
     localStorage.setItem('gc_debug_error', JSON.stringify({ exception: e.message }))
   }
@@ -104,14 +103,10 @@ async function refreshToken() {
   const rt = localStorage.getItem('gc_refresh_token')
   if (!rt) return false
   try {
-    const res = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await fetch('/api/token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: rt,
-        client_id: CLIENT_ID,
-        grant_type: 'refresh_token',
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: rt }),
     })
     const data = await res.json()
     if (data.access_token) {
