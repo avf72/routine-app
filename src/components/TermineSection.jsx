@@ -193,6 +193,12 @@ export default function TermineSection() {
   // ── Not authenticated ─────────────────────────────────────────────────────
 
   if (!authed) {
+    const dbg = {
+      access_token: !!localStorage.getItem('gc_access_token'),
+      refresh_token: !!localStorage.getItem('gc_refresh_token'),
+      verifier: !!localStorage.getItem('gc_pkce_verifier'),
+      url_code: !!new URLSearchParams(window.location.search).get('code'),
+    }
     return (
       <div style={{ padding: '40px 8px', textAlign: 'center' }}>
         <div style={{ fontSize: 52, marginBottom: 16 }}>📅</div>
@@ -213,6 +219,12 @@ export default function TermineSection() {
         >
           Mit Google verbinden
         </button>
+        <div style={{ marginTop: 24, fontSize: 11, color: '#aaa', fontFamily: 'monospace', textAlign: 'left', background: '#f5f5f5', borderRadius: 8, padding: 10 }}>
+          <div>access_token: {String(dbg.access_token)}</div>
+          <div>refresh_token: {String(dbg.refresh_token)}</div>
+          <div>pkce_verifier: {String(dbg.verifier)}</div>
+          <div>url ?code: {String(dbg.url_code)}</div>
+        </div>
       </div>
     )
   }
