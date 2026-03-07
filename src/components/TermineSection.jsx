@@ -224,6 +224,9 @@ export default function TermineSection() {
           <div>refresh_token: {String(dbg.refresh_token)}</div>
           <div>pkce_verifier: {String(dbg.verifier)}</div>
           <div>url ?code: {String(dbg.url_code)}</div>
+          <div style={{ marginTop: 6, color: '#c00', wordBreak: 'break-all' }}>
+            error: {localStorage.getItem('gc_debug_error') || 'none'}
+          </div>
         </div>
       </div>
     )

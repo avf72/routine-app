@@ -81,11 +81,12 @@ export async function handleCallback() {
       localStorage.setItem('gc_token_expiry', String(Date.now() + data.expires_in * 1000))
       if (data.refresh_token) localStorage.setItem('gc_refresh_token', data.refresh_token)
       localStorage.removeItem('gc_pkce_verifier')
+      localStorage.removeItem('gc_debug_error')
       return { tab: 'tasks' }
     }
-    console.error('Token exchange failed:', data)
+    localStorage.setItem('gc_debug_error', JSON.stringify(data))
   } catch (e) {
-    console.error('OAuth token exchange failed:', e)
+    localStorage.setItem('gc_debug_error', e.message)
   }
   return null
 }
