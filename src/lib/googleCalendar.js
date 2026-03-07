@@ -29,16 +29,8 @@ export function isAuthenticated() {
 }
 
 export async function startAuth() {
-  // Popup synchron öffnen (vor await, sonst blockiert iOS Safari)
-  const popup = window.open('', 'gc_oauth', 'width=520,height=650,left=150,top=80')
-  if (!popup) {
-    alert('Bitte erlaube Popups für diese Seite und versuche es erneut.')
-    return
-  }
-
   const verifier = randomString(64)
   const challenge = await pkceChallenge(verifier)
-  // Verifier im state-Parameter mitschicken (Avast isoliert localStorage zwischen Fenstern)
   localStorage.setItem('gc_pkce_verifier', verifier)
 
   const params = new URLSearchParams({
@@ -53,7 +45,7 @@ export async function startAuth() {
     state: verifier,
   })
 
-  popup.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
 }
 
 export function logout() {
@@ -62,20 +54,18 @@ export function logout() {
   localStorage.removeItem('gc_token_expiry')
 }
 
-// ── OAuth Callback (läuft im Popup) ──────────────────────────────────────────
+// ── OAuth Callback (läuft im Hauptfenster nach Redirect) ─────────────────────
 
 export async function handleCallback() {
   const params = new URLSearchParams(window.location.search)
-  const error = params.get('error')
   const code = params.get('code')
+  const error = params.get('error')
 
-  if (error) {
-    window.history.replaceState({}, '', window.location.pathname)
+  if (error || !code) {
+    if (error) window.history.replaceState({}, '', window.location.pathname)
     return null
   }
-  if (!code) return null
 
-  // Verifier zuerst aus state-Parameter lesen (Avast-kompatibel), dann localStorage als Fallback
   const verifier = params.get('state') || localStorage.getItem('gc_pkce_verifier')
   window.history.replaceState({}, '', window.location.pathname)
   if (!verifier) return null
@@ -99,25 +89,9 @@ export async function handleCallback() {
       localStorage.setItem('gc_token_expiry', String(Date.now() + data.expires_in * 1000))
       if (data.refresh_token) localStorage.setItem('gc_refresh_token', data.refresh_token)
       localStorage.removeItem('gc_pkce_verifier')
-
-      // Token-Daten ans Hauptfenster senden (funktioniert auch wenn opener null ist)
-      try {
-        window.opener?.postMessage({
-          type: 'gc_auth_done',
-          access_token: data.access_token,
-          refresh_token: data.refresh_token || null,
-          expires_in: data.expires_in,
-        }, window.location.origin)
-      } catch (_) {}
-
-      // Popup schliessen (klappt auch wenn opener null ist, solange Fenster per window.open() geöffnet wurde)
-      window.close()
-      return null
+      return { tab: 'tasks' }
     }
-    localStorage.setItem('gc_debug_error', JSON.stringify(data))
-  } catch (e) {
-    localStorage.setItem('gc_debug_error', e.message)
-  }
+  } catch (e) { /* ignore */ }
   return null
 }
 

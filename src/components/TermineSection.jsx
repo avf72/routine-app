@@ -99,35 +99,6 @@ export default function TermineSection() {
     if (authed) loadEvents()
   }, [authed, loadEvents])
 
-  // postMessage vom Popup empfangen (Avast blockiert window.opener, aber postMessage klappt)
-  useEffect(() => {
-    function onMessage(e) {
-      if (e.origin !== window.location.origin) return
-      if (e.data?.type !== 'gc_auth_done') return
-      if (e.data.access_token) {
-        localStorage.setItem('gc_access_token', e.data.access_token)
-        localStorage.setItem('gc_token_expiry', String(Date.now() + (e.data.expires_in || 3600) * 1000))
-        if (e.data.refresh_token) localStorage.setItem('gc_refresh_token', e.data.refresh_token)
-      }
-      setAuthed(true)
-    }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [])
-
-  // Polling als Fallback (falls postMessage nicht funktioniert)
-  const [polling, setPolling] = useState(false)
-  useEffect(() => {
-    if (!polling) return
-    const interval = setInterval(() => {
-      if (gc.isAuthenticated()) {
-        setAuthed(true)
-        setPolling(false)
-      }
-    }, 500)
-    const timeout = setTimeout(() => { clearInterval(interval); setPolling(false) }, 300_000)
-    return () => { clearInterval(interval); clearTimeout(timeout) }
-  }, [polling])
 
   async function handleSync() {
     setSyncing(true)
@@ -234,7 +205,7 @@ export default function TermineSection() {
           zu erstellen und zu synchronisieren.
         </div>
         <button
-          onClick={() => { gc.startAuth(); setPolling(true) }}
+          onClick={() => gc.startAuth()}
           style={{
             padding: '14px 32px', background: C.primary, border: 'none',
             borderRadius: 14, color: 'white', fontWeight: 800, fontSize: 15,
