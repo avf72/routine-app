@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, today, yesterday } from './lib/supabase'
-import { handleCallback } from './lib/googleCalendar'
 import HabitsTab from './components/HabitsTab'
 import RoutinesTab from './components/RoutinesTab'
 import TechnikTab from './components/TechnikTab'
@@ -144,16 +143,14 @@ async function autoRolloverTasks() {
     .eq('done', false)
 }
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('routines')
+export default function App({ gcNav }) {
+  const [activeTab, setActiveTab] = useState(gcNav?.tab || 'routines')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     async function init() {
       try {
-        const nav = await handleCallback()
-        if (nav?.tab) setActiveTab(nav.tab)
         await seedIfEmpty()
         await autoRolloverTasks()
       } catch (err) {

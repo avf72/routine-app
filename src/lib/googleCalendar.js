@@ -57,9 +57,10 @@ export async function handleCallback() {
     return null
   }
 
+  const verifier = localStorage.getItem('gc_pkce_verifier')
+
   window.history.replaceState({}, '', window.location.pathname)
 
-  const verifier = localStorage.getItem('gc_pkce_verifier')
   if (!verifier) return null
 
   try {
