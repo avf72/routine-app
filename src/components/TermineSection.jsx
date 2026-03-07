@@ -99,7 +99,23 @@ export default function TermineSection() {
     if (authed) loadEvents()
   }, [authed, loadEvents])
 
-  // Nach Login-Klick: Token in localStorage abwarten (Popup-Flow)
+  // postMessage vom Popup empfangen (Avast blockiert window.opener, aber postMessage klappt)
+  useEffect(() => {
+    function onMessage(e) {
+      if (e.origin !== window.location.origin) return
+      if (e.data?.type !== 'gc_auth_done') return
+      if (e.data.access_token) {
+        localStorage.setItem('gc_access_token', e.data.access_token)
+        localStorage.setItem('gc_token_expiry', String(Date.now() + (e.data.expires_in || 3600) * 1000))
+        if (e.data.refresh_token) localStorage.setItem('gc_refresh_token', e.data.refresh_token)
+      }
+      setAuthed(true)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
+  // Polling als Fallback (falls postMessage nicht funktioniert)
   const [polling, setPolling] = useState(false)
   useEffect(() => {
     if (!polling) return

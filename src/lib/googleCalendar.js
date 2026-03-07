@@ -100,13 +100,19 @@ export async function handleCallback() {
       if (data.refresh_token) localStorage.setItem('gc_refresh_token', data.refresh_token)
       localStorage.removeItem('gc_pkce_verifier')
 
-      // Im Popup: Popup schliessen (storage-Event informiert Hauptfenster)
-      if (window.opener && !window.opener.closed) {
-        window.close()
-        return null
-      }
+      // Token-Daten ans Hauptfenster senden (funktioniert auch wenn opener null ist)
+      try {
+        window.opener?.postMessage({
+          type: 'gc_auth_done',
+          access_token: data.access_token,
+          refresh_token: data.refresh_token || null,
+          expires_in: data.expires_in,
+        }, window.location.origin)
+      } catch (_) {}
 
-      return { tab: 'tasks' }
+      // Popup schliessen (klappt auch wenn opener null ist, solange Fenster per window.open() geöffnet wurde)
+      window.close()
+      return null
     }
     localStorage.setItem('gc_debug_error', JSON.stringify(data))
   } catch (e) {
