@@ -214,6 +214,11 @@ export default function TermineSection() {
         >
           Mit Google verbinden
         </button>
+        {localStorage.getItem('gc_debug_error') && (
+          <div style={{ marginTop: 12, padding: 10, background: '#FEE2E2', borderRadius: 8, fontSize: 11, wordBreak: 'break-all', color: '#991B1B' }}>
+            {localStorage.getItem('gc_debug_error')}
+          </div>
+        )}
       </div>
     )
   }
